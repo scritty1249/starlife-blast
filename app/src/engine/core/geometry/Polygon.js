@@ -165,96 +165,107 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
     cut (poly, mutate = false) { // https://en.wikipedia.org/wiki/Greiner%E2%80%93Hormann_clipping_algorithm
         if (!poly?.isPolygon) throw new Error(`[${typeString(this)}] Error: Cannot cut with non-Polygon type ${typeString(poly)}`);
         const newPolygon = mutate ? this : this.clone(true);
-        if (!newPolygon.isIntersecting(poly)) return newPolygon;
-
-        const _nodeMap = (p) => ({ pt: p, isIntersect: false, distance: 0, entry: false, visited: false, next: null, prev: null, neighbor: null });
-        const thisPts = this.path.points,
-            polyPts = poly.path.points,
-            listThis = thisPts.map(_nodeMap),
-            listPoly = polyPts.map(_nodeMap);
-
-        {
-            // FUCKIN LINKED LISTS?
-            const _link = (list) => {
-                for (let i = 0; i < list.length; i++) {
-                    list[i].next = list[(i + 1) % list.length];
-                    list[i].next.prev = list[i];
-                }
-            };
-            // setup neighbors (two way linked list) - (ew)
-            _link(listThis);
-            _link(listPoly);
-            const intersections = newPolygon.path.intersections(poly.path);
-            if (intersections.length === 0) {
-                const hole = poly.clone(true);
-                if (newPolygon.isClockwise) hole.path.points.reverse();
-                newPolygon.holes.push(hole);
-                return newPolygon;
-            }
-            // populate node/point details
-            for (const inter of intersections) {
-                const thisNode = { pt: inter.point, isIntersect: true, distance: inter.coeff.self, entry: inter.entering, visited: false };
-                const thatNode = { pt: inter.point, isIntersect: true, distance: inter.coeff.other, entry: !inter.entering, visited: false };
-
-                thisNode.neighbor = thatNode;
-                thatNode.neighbor = thisNode;
-
-                let afterThis = listThis[inter.index.self];
-                if (!afterThis) afterThis = listThis[0]; // fallback, close LL early
-                while (afterThis.next.isIntersect && afterThis.next.distance < inter.coeff.self) afterThis = afterThis.next;
-                thisNode.next = afterThis.next; thisNode.prev = afterThis;
-                thisNode.next.prev = thisNode; afterThis.next = thisNode;
-
-                let afterThat = listPoly[inter.index.other];
-                if (!afterThat) afterThat = listPoly[0]; // fallback
-                while (afterThat.next.isIntersect && afterThat.next.distance < inter.coeff.other) afterThat = afterThat.next;
-                thatNode.next = afterThat.next; thatNode.prev = afterThat;
-                thatNode.next.prev = thatNode; afterThat.next = thatNode;
-            }
-        }
-
-        // BLACKBOXED LOGIC - WHAT THE HELL IS THIS?
-        const polyPieces = [];
-        while (true) {
-            let currIntersect = null;
-            for (let i = 0; i < listThis.length; i++) {
-                let node = listThis[i];
-                let check = node;
-                let firstIter = true;
-                const start = check; // sentinal / terminal node
-                while (check !== start || firstIter) {
-                    firstIter = false;
-                    if (check.isIntersect && !check.visited && !check.entry) {
-                        currIntersect = check;
-                        break;
-                    }
-                    check = check.next;
-                }
-                if (currIntersect) break;
-            }
-            if (!currIntersect) break; 
-            const newPts = [];
-            let currNode = currIntersect,
-                onThis = true;
-            while (currNode && !currNode.visited) {
-                currNode.visited = true;
-                if (currNode.neighbor) currNode.neighbor.visited = true;
-                newPts.push(currNode.pt.clone());
-                if (currNode.isIntersect) {
-                    onThis = !onThis;
-                    currNode = currNode.neighbor;
-                }
-                currNode = currNode.next;
-            }
-            if (newPts.length > 2)
-                polyPieces.push(new Polygon(newPts));
-        }
-        if (polyPieces.length > 1) {
+        if (!newPolygon.isIntersecting(poly))
+            // no intersection
+            return newPolygon;
+        if (newPolygon.isInside(poly)) {
+            // cutting polygon is fully enclosed within this polygon
             const hole = poly.clone();
-            if (newPolygon.path.isClockwise) hole.path.points.reverse();
+            if (newPolygon.path.isClockwise)
+                hole.path.points.reverse();
             newPolygon.holes.push(hole);
-        } else if (polyPieces.length !== 0)
-            newPolygon.path.set(polyPieces[0].path);
+        } else {
+            // partial intersection
+            const _nodeMap = (p) => ({ pt: p, isIntersect: false, distance: 0, entry: false, visited: false, next: null, prev: null, neighbor: null });
+            const thisPts = this.path.points,
+                polyPts = poly.path.points,
+                listThis = thisPts.map(_nodeMap),
+                listPoly = polyPts.map(_nodeMap);
+
+            {
+                // FUCKIN LINKED LISTS?
+                const _link = (list) => {
+                    for (let i = 0; i < list.length; i++) {
+                        list[i].next = list[(i + 1) % list.length];
+                        list[i].next.prev = list[i];
+                    }
+                };
+                // setup neighbors (two way linked list) - (ew)
+                _link(listThis);
+                _link(listPoly);
+                const intersections = newPolygon.path.intersections(poly.path);
+                console.debug(intersections);
+                if (intersections.length === 0) {
+                    const hole = poly.clone(true);
+                    if (newPolygon.isClockwise) hole.path.points.reverse();
+                    newPolygon.holes.push(hole);
+                    return newPolygon;
+                }
+                // populate node/point details
+                for (const inter of intersections) {
+                    const thisNode = { pt: inter.point, isIntersect: true, distance: inter.coeff.self, entry: inter.entering, visited: false };
+                    const thatNode = { pt: inter.point, isIntersect: true, distance: inter.coeff.other, entry: !inter.entering, visited: false };
+
+                    thisNode.neighbor = thatNode;
+                    thatNode.neighbor = thisNode;
+
+                    let afterThis = listThis[inter.index.self];
+                    if (!afterThis) afterThis = listThis[0]; // fallback, close LL early
+                    while (afterThis.next.isIntersect && afterThis.next.distance < inter.coeff.self) afterThis = afterThis.next;
+                    thisNode.next = afterThis.next; thisNode.prev = afterThis;
+                    thisNode.next.prev = thisNode; afterThis.next = thisNode;
+
+                    let afterThat = listPoly[inter.index.other];
+                    if (!afterThat) afterThat = listPoly[0]; // fallback
+                    while (afterThat.next.isIntersect && afterThat.next.distance < inter.coeff.other) afterThat = afterThat.next;
+                    thatNode.next = afterThat.next; thatNode.prev = afterThat;
+                    thatNode.next.prev = thatNode; afterThat.next = thatNode;
+                }
+            }
+
+            // BLACKBOXED LOGIC - WHAT THE HELL IS THIS?
+            const polyPieces = [];
+            while (true) {
+                let currIntersect = null;
+                for (let i = 0; i < listThis.length; i++) {
+                    let node = listThis[i];
+                    let check = node;
+                    let firstIter = true;
+                    const start = check; // sentinal / terminal node
+                    while (check !== start || firstIter) {
+                        firstIter = false;
+                        if (check.isIntersect && !check.visited && !check.entry) {
+                            currIntersect = check;
+                            break;
+                        }
+                        check = check.next;
+                    }
+                    if (currIntersect) break;
+                }
+                if (!currIntersect) break; 
+                const newPts = [];
+                let currNode = currIntersect,
+                    onThis = true;
+                while (currNode && !currNode.visited) {
+                    currNode.visited = true;
+                    if (currNode.neighbor) currNode.neighbor.visited = true;
+                    newPts.push(currNode.pt.clone());
+                    if (currNode.isIntersect) {
+                        onThis = !onThis;
+                        currNode = currNode.neighbor;
+                    }
+                    currNode = currNode.next;
+                }
+                if (newPts.length > 2)
+                    polyPieces.push(new Polygon(newPts));
+            }
+            if (polyPieces.length > 1) {
+                const hole = poly.clone();
+                if (newPolygon.path.isClockwise) hole.path.points.reverse();
+                newPolygon.holes.push(hole);
+            } else if (polyPieces.length !== 0)
+                newPolygon.path.set(polyPieces[0].path);
+        }
         return newPolygon.reduceHoles();
     }
     draw (cursor, close = true) { // only draw the path
