@@ -168,9 +168,8 @@ export class PoolManager {
                 const prevTerrainID = terrainIDs[i];
                 const currTerrainID = terrainIDs[i + 1];
                 const currCanvasID = await canvasIDs[i];
-                const cj = cutJob.then(() =>
-                    this.cutTerrain(prevTerrainID, cuts, false, currTerrainID),
-                );
+                await cutJob;
+                const cj = this.cutTerrain(prevTerrainID, cuts, false, currTerrainID);
                 const dj = cj
                     // pool should assign the worker we want
                     .then(() => this.drawTerrain(currCanvasID, currTerrainID));
