@@ -71,6 +71,7 @@ export class AmmoMap {
             const count = originalHoleCounts[i];
             poly.holes.splice(count, poly.holes.length - count);
         });
+        console.debug(ammo.blasts);
         return new AmmoMap(finished, time, ammo.legend, ammo.blasts);
     }
     static decode (obj) {
