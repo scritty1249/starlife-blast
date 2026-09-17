@@ -161,7 +161,6 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
         }
         return segments;
     }
-    // [!] I have no idea what I'm doing!
     cut (poly, mutate = false) { // https://en.wikipedia.org/wiki/Greiner%E2%80%93Hormann_clipping_algorithm
         if (!poly?.isPolygon) throw new Error(`[${typeString(this)}] Error: Cannot cut with non-Polygon type ${typeString(poly)}`);
         const newPolygon = mutate ? this : this.clone(true);
@@ -174,7 +173,7 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
             // cutting polygon is swallowed
             hole = poly.clone(true);
         } else {
-            // partial intersection            
+            // partial intersection
             const polygons = [];
             let intersect = true;
             while (intersect) {
@@ -528,8 +527,9 @@ class IntersectionNode {
         node.prev = this;
     }
     // visits nodes, jumps to neighbors where possible
-    *walk (inverted = false) {
-        let reverse = !!inverted;
+    // when inverted is true, walk direction is reversed when traversing neighbors (union instead of difference operation)
+    *walk () {
+        let reverse = false;
         let current = this;
         while (current?.isIntersectionNode && !current.visited) {
             yield current;
@@ -538,7 +538,7 @@ class IntersectionNode {
                 current = current.neighbor;
                 if (current.visited) break;
                 current.visited = true;
-                //reverse = !reverse;
+                reverse = current.entry;
             }
             current = reverse
                 ? current.prev
