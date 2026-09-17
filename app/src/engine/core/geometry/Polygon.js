@@ -171,7 +171,7 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
         let hole;
         if (!nodes) {
             // cutting polygon is swallowed
-            hole = poly.clone(true);
+            hole = poly.clone();
         } else {
             // partial intersection
             const polygons = [];
@@ -193,7 +193,7 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
                 }
             }
             if (polygons.length > 1)
-                hole = poly.clone(true);
+                hole = poly.clone();
             else if (polygons.length !== 0)
                 newPolygon.path.set(polygons[0].path);
         }
