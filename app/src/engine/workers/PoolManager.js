@@ -166,6 +166,7 @@ export class PoolManager {
             for (let i = 0; i < blastGroups.length; i++) {
                 const interval = blastGroups[i];
                 const cuts = interval.map(({ shape }) => shape.Polygon(1));
+                console.debug(cuts);
                 const prevTerrainID = terrainIDs[i];
                 const currTerrainID = terrainIDs[i + 1];
                 const currCanvasID = await canvasIDs[i];
