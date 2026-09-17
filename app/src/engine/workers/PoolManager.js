@@ -160,7 +160,8 @@ export class PoolManager {
                 return this.#pool.createCache(cache).then(() => canvasID);
             });
             // setup promise chains
-            let cutJob = Promise.resolve();
+            let cutJob;
+            let drawJob = Promise.resolve();
             // load balanced cut operations
             for (let i = 0; i < blastGroups.length; i++) {
                 const interval = blastGroups[i];
@@ -168,24 +169,20 @@ export class PoolManager {
                 const prevTerrainID = terrainIDs[i];
                 const currTerrainID = terrainIDs[i + 1];
                 const currCanvasID = await canvasIDs[i];
-                await cutJob;
-                const cj = this.cutTerrain(prevTerrainID, cuts, false, currTerrainID);
-                const dj = cj
-                    // pool should assign the worker we want
-                    .then(() => this.drawTerrain(currCanvasID, currTerrainID));
-                drawJobs.push(
-                    dj
-                        .then(() => this.#pool.pullCache(currCanvasID, false))
-                        .then(() => this.#pool.cache[currCanvasID]),
+                await drawJob;
+                cutJob = this.cutTerrain(prevTerrainID, cuts, false, currTerrainID);
+                // pool should assign the worker we want
+                drawJob = cutJob.then(() => this.drawTerrain(currCanvasID, currTerrainID));
+                drawJobs.push(drawJob
+                    .then(() => this.#pool.pullCache(currCanvasID, false))
+                    .then(() => this.#pool.cache[currCanvasID])
                 );
-                cutJobs.push(
-                    cj
-                        .then(() => this.#pool.pullCache(currTerrainID, true))
-                        .then(() => this.#pool.cache[currTerrainID].terrain),
+                cutJobs.push(cutJob
+                    .then(() => this.#pool.pullCache(currTerrainID, true))
+                    .then(() => this.#pool.cache[currTerrainID].terrain)
                 );
-                cutJob = dj;
                 if (prevTerrainID !== terrainID)
-                    cj.then(() => this.destroyCache(prevTerrainID));
+                    cutJob.then(() => this.destroyCache(prevTerrainID));
             }
             // wait for all jobs to finish
             const frames = await Promise.all(drawJobs);
