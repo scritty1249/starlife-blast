@@ -181,7 +181,7 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
                 intersect = null;
                 for (const node of nodes) {
                     if (node.isIntersect && !node.visited && !node.entry) {
-                        intersect = check;
+                        intersect = node;
                         break;
                     }
                 }
