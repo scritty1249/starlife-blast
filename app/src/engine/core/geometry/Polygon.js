@@ -537,6 +537,7 @@ class IntersectionNode {
             current.visited = true;
             if (current.isIntersect) {
                 current = current.neighbor;
+                if (current.visited) break;
                 current.visited = true;
                 reverse = !reverse;
             }
