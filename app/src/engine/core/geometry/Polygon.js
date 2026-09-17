@@ -189,7 +189,7 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
                     const points = [];
                     for (const node of intersect.walk(false))
                         points.push(node.pt.clone());
-                    if (newPts.length > 2)
+                    if (points.length > 2)
                         polygons.push(new Polygon(points));
                 }
             }
