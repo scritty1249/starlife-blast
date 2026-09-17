@@ -973,7 +973,7 @@ export class Round extends Phase {
         const Recorder = TurnRecorder.create(
             this.#Threaded.cache[this.store.cacheKey.background],
             this.Players,
-            this.Terrain
+            this.Terrain.clone(true)
         );
         this.Global.Events.raiseEvent("LOADING", {hide: false, message: "loading turn (recording)"});
         const recording = Recorder.record(
@@ -1012,7 +1012,7 @@ export class Round extends Phase {
         let players = {};
         if (recording.length) {
             const changes = recording.end.difference(recording.start);
-            players = changes.captureAffectedActors(this.Players)
+            players = changes.captureAffectedActors(this.Players);
         }
         return {
             recording: recording.pack(),
