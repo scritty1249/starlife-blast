@@ -489,8 +489,7 @@ class IntersectionNodeList {
     }
     *[Symbol.iterator]() {
         const { length } = this;
-        let node = this.#start;
-        for (let i = 0; i < length; node = node.next)
+        for (let node = this.#start, i = 0; i < length; i++, node = node.next)
             yield node;
     }
 
