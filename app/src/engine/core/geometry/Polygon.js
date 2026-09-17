@@ -114,7 +114,7 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
     // optimize polygons, remove holes that are completely swallowed / overlapping with other holes
     reduceHoles () {
         const { holes } = this;
-        const newHoles = holes.filter((hole) => holes.some((h) => h.isInside(hole)));
+        const newHoles = holes.filter((hole) => !holes.some((h) => h.isInside(hole)));
         if (holes.length !== newHoles.length) {
             holes.splice(0, holes.length)
             for (const hole of newHoles) holes.push(hole);
@@ -168,105 +168,49 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
         if (!newPolygon.isIntersecting(poly))
             // no intersection
             return newPolygon;
-        if (newPolygon.isInside(poly)) {
-            // cutting polygon is fully enclosed within this polygon
-            const hole = poly.clone();
-            if (newPolygon.path.isClockwise)
+        const nodes = getNodes(newPolygon.path, poly.path);
+        let hole;
+        if (!nodes) {
+            // cutting polygon is swallowed
+            hole = poly.clone(true);
+        } else {
+            // partial intersection            
+            const polygons = [];
+            let intersect = true;
+            while (intersect) {
+                intersect = null;
+                for (const node of nodes) {
+                    if (node.isIntersect && !node.visited && !node.entry) {
+                        intersect = check;
+                        break;
+                    }
+                }
+                if (intersect) {
+                    const points = [];
+                    for (const node of intersect.walk(false))
+                        points.push(node.pt.clone());
+                    if (newPts.length > 2)
+                        polygons.push(new Polygon(points));
+                }
+            }
+            if (polygons.length > 1)
+                hole = poly.clone(true);
+            else if (polygons.length !== 0)
+                newPolygon.path.set(polygons[0].path);
+        }
+        if (hole && !newPolygon.holes.some((h) => h.isInside(hole))) {
+            const { holes } = newPolygon;
+            const newHoles = holes.filter((h) => !hole.isInside(h));
+            if (newHoles.length !== holes.length) {
+                holes.splice(0, holes.length);
+                for (let i = 0; i < newHoles.length; i++)
+                    holes.push(newHoles[i]);
+            }
+            if (newPolygon.path.isClockwise === hole.path.isClockwise)
                 hole.path.points.reverse();
             newPolygon.holes.push(hole);
-        } else {
-            // partial intersection
-            const _nodeMap = (p) => ({ pt: p, isIntersect: false, distance: 0, entry: false, visited: false, next: null, prev: null, neighbor: null });
-            const thisPts = this.path.points,
-                polyPts = poly.path.points,
-                listThis = thisPts.map(_nodeMap),
-                listPoly = polyPts.map(_nodeMap);
-
-            {
-                // FUCKIN LINKED LISTS?
-                const _link = (list) => {
-                    for (let i = 0; i < list.length; i++) {
-                        list[i].next = list[(i + 1) % list.length];
-                        list[i].next.prev = list[i];
-                    }
-                };
-                // setup neighbors (two way linked list) - (ew)
-                _link(listThis);
-                _link(listPoly);
-                const intersections = newPolygon.path.intersections(poly.path);
-                console.debug(intersections);
-                if (intersections.length === 0) {
-                    const hole = poly.clone(true);
-                    if (newPolygon.isClockwise) hole.path.points.reverse();
-                    newPolygon.holes.push(hole);
-                    return newPolygon;
-                }
-                // populate node/point details
-                for (const inter of intersections) {
-                    const thisNode = { pt: inter.point, isIntersect: true, distance: inter.coeff.self, entry: inter.entering, visited: false };
-                    const thatNode = { pt: inter.point, isIntersect: true, distance: inter.coeff.other, entry: !inter.entering, visited: false };
-
-                    thisNode.neighbor = thatNode;
-                    thatNode.neighbor = thisNode;
-
-                    let afterThis = listThis[inter.index.self];
-                    if (!afterThis) afterThis = listThis[0]; // fallback, close LL early
-                    while (afterThis.next.isIntersect && afterThis.next.distance < inter.coeff.self) afterThis = afterThis.next;
-                    thisNode.next = afterThis.next; thisNode.prev = afterThis;
-                    thisNode.next.prev = thisNode; afterThis.next = thisNode;
-
-                    let afterThat = listPoly[inter.index.other];
-                    if (!afterThat) afterThat = listPoly[0]; // fallback
-                    while (afterThat.next.isIntersect && afterThat.next.distance < inter.coeff.other) afterThat = afterThat.next;
-                    thatNode.next = afterThat.next; thatNode.prev = afterThat;
-                    thatNode.next.prev = thatNode; afterThat.next = thatNode;
-                }
-            }
-
-            // BLACKBOXED LOGIC - WHAT THE HELL IS THIS?
-            const polyPieces = [];
-            while (true) {
-                let currIntersect = null;
-                for (let i = 0; i < listThis.length; i++) {
-                    let node = listThis[i];
-                    let check = node;
-                    let firstIter = true;
-                    const start = check; // sentinal / terminal node
-                    while (check !== start || firstIter) {
-                        firstIter = false;
-                        if (check.isIntersect && !check.visited && !check.entry) {
-                            currIntersect = check;
-                            break;
-                        }
-                        check = check.next;
-                    }
-                    if (currIntersect) break;
-                }
-                if (!currIntersect) break; 
-                const newPts = [];
-                let currNode = currIntersect,
-                    onThis = true;
-                while (currNode && !currNode.visited) {
-                    currNode.visited = true;
-                    if (currNode.neighbor) currNode.neighbor.visited = true;
-                    newPts.push(currNode.pt.clone());
-                    if (currNode.isIntersect) {
-                        onThis = !onThis;
-                        currNode = currNode.neighbor;
-                    }
-                    currNode = currNode.next;
-                }
-                if (newPts.length > 2)
-                    polyPieces.push(new Polygon(newPts));
-            }
-            if (polyPieces.length > 1) {
-                const hole = poly.clone();
-                if (newPolygon.path.isClockwise) hole.path.points.reverse();
-                newPolygon.holes.push(hole);
-            } else if (polyPieces.length !== 0)
-                newPolygon.path.set(polyPieces[0].path);
         }
-        return newPolygon.reduceHoles();
+        return newPolygon;
     }
     draw (cursor, close = true) { // only draw the path
         if (!this.#path.points.length) return;
@@ -319,8 +263,16 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
         }   
         throw new Error(`[${typeString(this)}] Error: Unable to compute border of unsupported type ${typeString(value)}`);
     }
+    // check if VALUE is inside of THIS
     isInside (value) {
-        return this.isIntersecting(value) && !this.isBordering(value);
+        if (value?.isVector) {
+            return this.isIntersecting(value) && !this.isBordering(value);
+        } else if (value?.isPolygon) {
+            return value.edgePoints.every((point) => this.isIntersecting(point));
+        } else if (value?.isShape) {
+            return this.isIntersecting(value) && !this.edges.some((path) => value.isIntersecting(path));
+        }
+        throw new Error(`[${typeString(this)}] Error: Unable to compute enclosure of unsupported type ${typeString(value)}`);
     }
     raycast (ray) {
         const distance = ray.at(0).distance(ray.at(-1));
@@ -474,6 +426,127 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
         return this.#edgeSegmentPoints;
     }
     get id () { return this.#id }
+}
+
+function getNodes (selfPath, otherPath) {
+    const intersections = selfPath.intersections(otherPath);
+    if (!intersections.length) return;
+    const selfNodes = new IntersectionNodeList(selfPath.points, false);
+    const otherNodes = new IntersectionNodeList(otherPath.points, true);
+    for (const inter of intersections) {
+        const selfNode = selfNodes.intersection(inter);
+        const otherNode = otherNodes.intersection(inter);
+        selfNode.neighbor = otherNode;
+        otherNode.neighbor = selfNode;
+    }
+    return selfNodes;
+}
+
+class IntersectionNodeList {
+    #original = new Array();
+    #intersections = new Array();
+    isOther = false;
+    constructor (points, isOther) {
+        if (typeof isOther === "boolean")
+            this.isOther = isOther;
+        this.set(points);
+    }
+
+    intersection (intersect) {
+        const { isOther } = this;
+        const node = IntersectionNode.fromIntersect(intersect, isOther);
+        const index = isOther ? intersect.index.other : intersect.index.self;
+        let nextNode = this.#original[index];
+        if (!nextNode) nextNode = this.#original[0]; // fallback, close LL early
+        while (nextNode.next.isIntersect && nextNode.next.distance < node.distance)
+            nextNode = nextNode.next;
+        node.insertAfter(nextNode);
+        this.#intersections.push(node);
+        return node;
+    }
+    set (points) {
+        this.#original.splice(0, this.#original.length);
+        if (points?.length)
+            for (let i = 0; i < points.length; i++)
+                this.push(points[i]);
+        this.link();
+    }
+    push (point) {
+        this.#original.push(new IntersectionNode(point));
+    }
+    unshift (point) {
+        this.#original.unshift(new IntersectionNode(point));
+    }
+    insert (point, index) {
+        this.#original.splice(index, 0, new IntersectionNode(point));
+    }
+    // [!] clears intersections
+    link () {
+        this.#intersections.splice(0, this.#intersections.length);
+        const nodes = this.#original;
+        for (let i = 0; i < nodes.length; i++)
+            nodes[i].linkNext(nodes[(i + 1) % nodes.length]);
+    }
+    *[Symbol.iterator]() {
+        const { length } = this;
+        let node = this.#start;
+        for (let i = 0; i < length; node = node.next)
+            yield node;
+    }
+
+    get #start () { return this.#original[0] }
+    get length () { return this.#original.length + this.#intersections.length }
+}
+
+class IntersectionNode {
+    static fromIntersect (intersection, isOther = false) {
+        const node = new IntersectionNode(intersection.point);
+        node.isIntersect = true;
+        node.entry = isOther ? !intersection.entering : intersection.entering;
+        node.distance = isOther ? intersection.coeff.other : intersection.coeff.self;
+        return node;
+    }
+    isIntersect = false;
+    visited = false;
+    entry = false;
+    distance = 0;
+    pt = null;
+    next = null;
+    prev = null;
+    neighbor = null;
+    constructor (point) {
+        this.pt = point;
+    }
+
+    insertAfter (node) {
+        this.next = node.next;
+        this.prev = node;
+        this.next.prev = this;
+        node.next = this;
+    }
+    linkNext (node) {
+        this.next = node;
+        node.prev = this;
+    }
+    // visits nodes, jumps to neighbors where possible
+    *walk (inverted = false) {
+        let reverse = !!inverted;
+        let current = this;
+        while (current?.isIntersectionNode && !current.visited) {
+            yield current;
+            current.visited = true;
+            if (current.isIntersect) {
+                current = current.neighbor;
+                current.visited = true;
+                reverse = !reverse;
+            }
+            current = reverse
+                ? current.prev
+                : current.next;
+        }
+    }
+
+    get isIntersectionNode () { return true }
 }
 
 function encodePolygon (polygon, offset) {
