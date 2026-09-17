@@ -159,31 +159,25 @@ export class PoolManager {
                 );
                 return this.#pool.createCache(cache).then(() => canvasID);
             });
-            // setup promise chains
-            let cutJob;
-            let drawJob = Promise.resolve();
             // load balanced cut operations
             for (let i = 0; i < blastGroups.length; i++) {
                 const interval = blastGroups[i];
                 const cuts = interval.map(({ shape }) => shape.Polygon(1));
-                console.debug(cuts);
                 const prevTerrainID = terrainIDs[i];
                 const currTerrainID = terrainIDs[i + 1];
                 const currCanvasID = await canvasIDs[i];
-                await drawJob;
-                cutJob = this.cutTerrain(prevTerrainID, cuts, false, currTerrainID);
-                // pool should assign the worker we want
-                drawJob = cutJob.then(() => this.drawTerrain(currCanvasID, currTerrainID));
-                drawJobs.push(drawJob
-                    .then(() => this.#pool.pullCache(currCanvasID, false))
-                    .then(() => this.#pool.cache[currCanvasID])
+                await this.cutTerrain(prevTerrainID, cuts, false, currTerrainID);
+                drawJobs.push(
+                    this.drawTerrain(currCanvasID, currTerrainID)
+                        .then(() => this.#pool.pullCache(currCanvasID, false))
+                        .then(() => this.#pool.cache[currCanvasID])
                 );
-                cutJobs.push(cutJob
-                    .then(() => this.#pool.pullCache(currTerrainID, true))
-                    .then(() => this.#pool.cache[currTerrainID].terrain)
+                cutJobs.push(
+                    this.#pool.pullCache(currTerrainID, true)
+                        .then(() => this.#pool.cache[currTerrainID].terrain)
                 );
                 if (prevTerrainID !== terrainID)
-                    cutJob.then(() => this.destroyCache(prevTerrainID));
+                    this.destroyCache(prevTerrainID);
             }
             // wait for all jobs to finish
             const frames = await Promise.all(drawJobs);
