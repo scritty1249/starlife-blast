@@ -527,18 +527,18 @@ class IntersectionNode {
         node.prev = this;
     }
     // visits nodes, jumps to neighbors where possible
-    // when inverted is true, walk direction is reversed when traversing neighbors (union instead of difference operation)
-    *walk () {
+    // when merge is true, walk direction follows a union instead of difference operation
+    *walk (merge = false) {
         let reverse = false;
         let current = this;
         while (current?.isIntersectionNode && !current.visited) {
             yield current;
             current.visited = true;
             if (current.isIntersect) {
+                reverse = merge ? !reverse : current.entry;
                 current = current.neighbor;
                 if (current.visited) break;
                 current.visited = true;
-                reverse = !current.entry;
             }
             current = reverse
                 ? current.prev
