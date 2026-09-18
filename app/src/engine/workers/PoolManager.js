@@ -210,8 +210,11 @@ export class PoolManager {
                             collectCanvasJobs.push(collectJob);
                         }
                     }
-                    await drawJob;
-                    await Promise.all(collectCanvasJobs);
+                    await Promise.all([
+                        this.updateCache(terrainID, true),
+                        drawJob,
+                        Promise.all(collectCanvasJobs)
+                    ]);
                     const intervals = Array.from(blastGroups, (group, i) => new BlastInterval(
                         group[0].delay,
                         terrains[i],
