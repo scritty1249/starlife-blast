@@ -444,10 +444,6 @@ class WorkerEntryInstance extends Identifiable {
         this.#entry = entry;
         this.#postCallback = postJobCallback;
         this.#decodeCallback = decodeCacheCallback;
-        if (entry.isBusy) {
-            this.#isBusy = true;
-            entry.onAvailable.then(() => this.#isBusy = false);
-        }
         this.#entry.hold();
     }
 
