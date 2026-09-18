@@ -464,7 +464,7 @@ class WorkerEntryInstance extends Identifiable {
     }
 
     async post (type = "", payload = {}, transfer = []) {
-        const { payload = {} } = await this.#postCallback(
+        const { payload: data = {} } = await this.#postCallback(
             type,
             payload,
             transfer,
@@ -472,9 +472,9 @@ class WorkerEntryInstance extends Identifiable {
             this.#entry,
             false
         );
-        return Object.keys(payload).length === 0
+        return Object.keys(data).length === 0
             ? undefined
-            : payload;
+            : data;
     }
     async sendCache (id, entryInstance, clone = false) {
         await this.#postCallback(
