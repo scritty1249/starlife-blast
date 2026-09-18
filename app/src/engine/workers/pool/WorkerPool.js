@@ -450,7 +450,7 @@ class WorkerEntryInstance extends Identifiable {
     async #pullCache (id, clone) {
         const { payload } = await this.#postCallback(
             "", 
-            { id, clone, manager: true }, 
+            { clone, source: id, manager: true }, 
             [],
             "SENDCACHE",
             this.#entry,
@@ -475,7 +475,7 @@ class WorkerEntryInstance extends Identifiable {
     async sendCache (id, entryInstance, clone = false) {
         await this.#postCallback(
             "",
-            { dest: id, source: id, clone, worker: entryInstance.id, manager: false }, 
+            { clone, dest: id, source: id, worker: entryInstance.id, manager: false }, 
             [],
             "SENDCACHE",
             this.#entry,

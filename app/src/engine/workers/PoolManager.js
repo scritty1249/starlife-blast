@@ -149,74 +149,78 @@ export class PoolManager {
             const frames = new Array(blastGroups.length);
             const geometryWorker = this.#pool.claimWorker();
             const canvasWorker = this.#pool.claimWorker();
-            // setup temp caches
-            const terrainIDs = [terrainID];
-            blastGroups.forEach((_, i) =>
-                terrainIDs.push(`${terrainID}_p${i}_${jobID}`),
-            );
-            const canvasIDs = Array.from(blastGroups, (_, i) => {
-                const canvasID = `${terrainID}_c${i}_${jobID}`;
-                const cache = new CanvasCache(
-                    planeSize.x,
-                    planeSize.y,
-                    canvasID,
+            try {
+                // setup temp caches
+                const terrainIDs = [terrainID];
+                blastGroups.forEach((_, i) =>
+                    terrainIDs.push(`${terrainID}_p${i}_${jobID}`),
                 );
-                return canvasWorker.putCache(cache).then(() => canvasID);
-            });
-            await this.#pool.copyCache(terrainID, terrainID, false, geometryWorker.id);
+                const canvasIDs = Array.from(blastGroups, (_, i) => {
+                    const canvasID = `${terrainID}_c${i}_${jobID}`;
+                    const cache = new CanvasCache(
+                        planeSize.x,
+                        planeSize.y,
+                        canvasID,
+                    );
+                    return canvasWorker.putCache(cache).then(() => canvasID);
+                });
+                await this.#pool.copyCache(terrainID, terrainID, false, geometryWorker.id);
 
-            for (let i = 0; i < blastGroups.length; i++) {
-                const interval = blastGroups[i];
-                const prevTerrainID = terrainIDs[i];
-                const currTerrainID = terrainIDs[i + 1];
-                const currCanvasID = await canvasIDs[i];
+                for (let i = 0; i < blastGroups.length; i++) {
+                    const interval = blastGroups[i];
+                    const prevTerrainID = terrainIDs[i];
+                    const currTerrainID = terrainIDs[i + 1];
+                    const currCanvasID = await canvasIDs[i];
 
-                const encodedCuts = interval
-                    .map(({ shape }) => shape.Polygon(1))
-                    .map((collider) => collider.Float32(collider.depth));
-                const buffers = encodedCuts
-                    .map(({ buffers }) => buffers)
-                    .flat(1);
-                const { terrain } = await geometryWorker.post(
-                    "CUTTERRAIN",
-                    {
-                        dest: currTerrainID,
-                        source: prevTerrainID,
-                        cuts: encodedCuts,
-                        callback: true, // will still cache the result
-                    },
-                    buffers
-                );
-                drawJob = drawJob
-                    .then(() => geometryWorker.sendCache(currTerrainID, canvasWorker, false))
-                    .then(() => canvasWorker.post(
-                        "DRAWTERRAIN",
+                    const encodedCuts = interval
+                        .map(({ shape }) => shape.Polygon(1))
+                        .map((collider) => collider.Float32(collider.depth));
+                    const buffers = encodedCuts
+                        .map(({ buffers }) => buffers)
+                        .flat(1);
+                    const { terrain } = await geometryWorker.post(
+                        "CUTTERRAIN",
                         {
-                            canvas: currCanvasID,
-                            terrain: currTerrainID
-                        }
-                    ));
-                drawJob.then(() => canvasWorker.dropCache(currTerrainID));
-                {
-                    const index = i;
-                    const collectJob = drawJob
-                        .then(() => canvasWorker.getCache(currCanvasID)) // removes from worker
-                        .then((frame) => frames[index] = frame);
-                    terrains[index] = Terrain.fromObject(terrain);
-                    collectCanvasJobs.push(collectJob);
+                            dest: currTerrainID,
+                            source: prevTerrainID,
+                            cuts: encodedCuts,
+                            callback: true, // will still cache the result
+                        },
+                        buffers
+                    );
+                    drawJob = drawJob
+                        .then(() => geometryWorker.sendCache(currTerrainID, canvasWorker, false))
+                        .then(() => canvasWorker.post(
+                            "DRAWTERRAIN",
+                            {
+                                canvas: currCanvasID,
+                                terrain: currTerrainID
+                            }
+                        ));
+                    drawJob.then(() => canvasWorker.dropCache(currTerrainID));
+                    {
+                        const index = i;
+                        const cid = currCanvasID;
+                        const collectJob = drawJob
+                            .then(() => canvasWorker.getCache(cid)) // removes from worker
+                            .then((frame) => frames[index] = frame);
+                        terrains[index] = Terrain.fromObject(terrain);
+                        collectCanvasJobs.push(collectJob);
+                    }
                 }
+                await drawJob;
+                await Promise.all(collectCanvasJobs);
+                const intervals = Array.from(blastGroups, (group, i) => new BlastInterval(
+                    group[0].delay,
+                    terrains[i],
+                    frames[i],
+                    group
+                ));
+                return intervals;
+            } finally {
+                geometryWorker.release();
+                canvasWorker.release();
             }
-            await drawJob;
-            await Promise.all(collectCanvasJobs);
-            geometryWorker.release();
-            canvasWorker.release();
-            const intervals = Array.from(blastGroups, (group, i) => new BlastInterval(
-                group[0].delay,
-                terrains[i],
-                frames[i],
-                group
-            ));
-            return intervals;
 
             // [!] old version
             // for (let i = 0; i < blastGroups.length; i++) {
