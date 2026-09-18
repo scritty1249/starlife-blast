@@ -239,7 +239,7 @@ export class WorkerPool extends Identifiable {
         await Promise.all(transfers);
     }
     claimWorker () {
-        return new PoolEntryInstance(
+        return new WorkerEntryInstance(
             this.#nextWorker(),
             async (...args) => await this.#postJob(...args),
             (...args) => this.#decodeCache(...args)
