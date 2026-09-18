@@ -260,7 +260,7 @@ export class WorkerPool extends Identifiable {
     async post (type, payload, transfer = [], cachesUsed = []) {
         const caches = new Set(cachesUsed);
         const worker = this.#getPrioritizedWorker(caches);
-        this.#collectCaches(worker.id, caches.difference(worker.cache))
+        await this.#collectCaches(worker.id, caches.difference(worker.cache))
             .catch((e) => { console.warn(`[${typeString(this)}]: Failed to transfer cache(s) specified for worker job\n`, e)});
         return await this.#postJob(type, payload, transfer, "", worker) // don't dispose of transaction
             .then(({payload}) => Object.keys(payload).length === 0 ? undefined : payload ); // [!] getting empty objects instead of undefined for some reason on webworker response??
