@@ -225,6 +225,8 @@ export class PoolManager {
                 }
             } else {
                 // [!] old version, should work with as little as one thread.
+                const drawJobs = [];
+                const cutJobs = [];
                 const canvasIDs = Array.from(canvasCaches, (cache) => {
                     return this.#pool.setCache(cache).then(() => cache.id);
                 });
