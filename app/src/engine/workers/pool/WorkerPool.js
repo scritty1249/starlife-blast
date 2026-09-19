@@ -510,8 +510,10 @@ class WorkerEntryInstance extends Identifiable {
         return await this.#pullCache(id, true);
     }
     release () {
-        this.#entry.release();
-        this.#entry = null;
+        if (this.#entry) {
+            this.#entry.release();
+            this.#entry = null;
+        }
     }
 
     get isWorkerEntryInstance () { return true }

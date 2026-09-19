@@ -210,6 +210,7 @@ export class PoolManager {
                             collectCanvasJobs.push(collectJob);
                         }
                     }
+                    geometryWorker.release();
                     await Promise.all([
                         this.updateCache(terrainID, true),
                         drawJob,
