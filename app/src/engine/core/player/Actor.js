@@ -93,7 +93,7 @@ export class Actor extends Loadable {
     toJSON () {
         const payload = {
             data: this.Metadata.toJSON(),
-            hitpoints: this.HitTotal.toJSON(),
+            hitpoints: this.HitTotal.toJSON().layers,
         };
         if (this.ready) {
             payload.position = this.Puppet.position.toJSON();

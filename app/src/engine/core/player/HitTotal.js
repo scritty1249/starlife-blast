@@ -7,7 +7,7 @@ import { Hashable, FNV1a } from "../math/Hash.js";
 export class HitTotal extends Hashable {
     static fromObject (obj, hitpointMap) {
         try {
-            return new HitTotal(...Array.from(obj.layers,
+            return new HitTotal(...Array.from(obj,
                 (hitpoints) => hitpointMap[String(hitpoints.type)].fromObject(hitpoints)
             ));
         } catch (err) {
