@@ -161,21 +161,16 @@ export class PoolManager {
                 const frames = new Array(blastGroups.length);
                 const geometryWorker = this.#pool.claimWorker();
                 try {
-                    // setup temp caches
                     await this.#pool.copyCache(terrainID, terrainID, false, geometryWorker.id);
                     for (let i = 0; i < blastGroups.length; i++) {
                         const srcTerrainID = terrainIDs[i];
                         const destTerrainID = terrainIDs[i + 1];
-                        console.debug(`Starting cut ${i}`);
                         rawTerrains[i] = await cutBlasts(geometryWorker, srcTerrainID, destTerrainID, blastGroups[i], !!i);
-                        console.debug(`Finished cut ${i}`);
                         const canvasWorker = this.#pool.claimWorker();
                         await geometryWorker.sendCache(destTerrainID, canvasWorker, true);
-                        console.debug(`Starting draw ${i}`);
                         drawJobs.push(
                             renderTerrain(canvasWorker, canvasCaches[i], destTerrainID)
                                 .then((frame) => frames[i] = frame)
-                                .then(() => console.debug(`Finished draw ${i}`))
                                 .finally(() => canvasWorker.release())
                         );
                     }
