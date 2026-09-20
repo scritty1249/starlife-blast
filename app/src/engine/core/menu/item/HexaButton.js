@@ -1,5 +1,5 @@
-import { Equigon } from "../../geometry/Equigon";
-import { ShapeButton } from "./ShapeButton";
+import { Equigon } from "../../geometry/Equigon.js";
+import { ShapeButton } from "./ShapeButton.js";
 
 export class HexaButton extends ShapeButton {
     #points = {
