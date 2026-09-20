@@ -40,6 +40,7 @@ export class AmmoSelect extends Menu {
         this.#resetButtonPositions();
     }
     #resetButtonPositions () {
+        if (!this.InterfaceLayers.buttons.size) return;
         const { spacing, count, center } = this.store.layout;
         const coords = [];
         for (let q = -count; q <= count; q++) {
@@ -68,19 +69,21 @@ export class AmmoSelect extends Menu {
         const { BUTTON_TEXT_PADDING_SCALE } = this.constructor;
         const { FONT_SIZE } = this.Parent.Global.store;
         buttons.clear();
-        for (let i = 0; i < this.store.layout.count; i++) {
-            const selection = selections[i % selections.length];
-            const button = new AmmoTypeButton(selection, legLength);
-            button.fontSize = FONT_SIZE;
-            button.computeTextSizing(this.Parent.Global.Display.cursor);
-            button.textPadding.apply(
-                button.textSizing.width * BUTTON_TEXT_PADDING_SCALE.x,
-                button.textSizing.height * BUTTON_TEXT_PADDING_SCALE.y
-            );
-            button.onclick = () => {
-                this.close({selection});
-            };
-            buttons.push(button);
+        if (selections.length) {
+            for (let i = 0; i < this.store.layout.count; i++) {
+                const selection = selections[i % selections.length];
+                const button = new AmmoTypeButton(selection, legLength);
+                button.fontSize = FONT_SIZE;
+                button.computeTextSizing(this.Parent.Global.Display.cursor);
+                button.textPadding.apply(
+                    button.textSizing.width * BUTTON_TEXT_PADDING_SCALE.x,
+                    button.textSizing.height * BUTTON_TEXT_PADDING_SCALE.y
+                );
+                button.onclick = () => {
+                    this.close({selection});
+                };
+                buttons.push(button);
+            }
         }
     }
     // computes delta from last drawn position to last active position
@@ -178,17 +181,16 @@ export class AmmoSelect extends Menu {
         const triple = 3 * layers;
         layout.count = Math.max(37, (triple * triple) - triple + 1);
         this.#createButtons(legLength);
+        layout.center = this.Parent.Global.Display.center;
+        layout.focal = layout.center.clone();
         if (!this.InterfaceLayers.buttons.size) return;
         const { shape } = this.InterfaceLayers.buttons.items[0];
-        
         layout.buttonSize = shape.globalTransform.scale.clone();
         layout.buttonSize.x *= Math.sqrt(3) * shape.length;
         layout.buttonSize.y *= 1.5 * shape.length;
         layout.spacing = layout.buttonSize.clone();
         layout.spacing.x += padding;
         layout.spacing.y += padding;
-        layout.center = this.Parent.Global.Display.center;
-        layout.focal = layout.center.clone();
 
         const totalSpace = layout.spacing.mul(layout.rings * 2 - 1);
         const halfSpace = totalSpace.div(2);

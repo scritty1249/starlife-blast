@@ -156,8 +156,14 @@ class TurnRecording {
     get ammoMap () { return this.#ammoMap }
     get start () { return this.states.at(0) }
     get end () { return this.states.at(-1) }
-    get final () { return this.states.reduce((acc, curr) => acc.union(curr), this.start) } // [!] horrible wasteful
-    get duration () { return this.ammoMap.time }
+    get final () { return this.states.reduce((acc, curr) => acc.union(curr), this.start) } // [!] horribly wasteful
+    get duration () {
+        // include time of any lingering blasts
+        let max = this.ammoMap?.time || 0;
+        for (const { time } of this.states)
+            if (time > max) max = time;
+        return max;
+    }
     get intervals () { return this.states.map(({interval}) => interval) }
     get changes () { return this.length ? this.end.difference(this.start) : undefined }
     get length () { return this.states.length }
@@ -255,6 +261,11 @@ export class TurnRecorder {
                 if (states.length)
                     for (const state of states)
                         recording.states.push(state);
+            }
+            // recording any blasts that occur after ammo expires
+            for (const interval of intervals) {
+                TurnRecorder.#applyBlastInterval(terrain, interval, this.#actors);
+                recording.states.push(new RoundState(RoundState.getActorStates(this.#actors), interval));
             }
             for (const player of this.#actors.values()) {
                 if (player.id in recording.start.actors)

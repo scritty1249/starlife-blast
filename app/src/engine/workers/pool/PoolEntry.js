@@ -6,7 +6,8 @@ export class PoolEntry extends Identifiable {
         promise: undefined,
         resolve: undefined,
         reject: undefined,
-        isResolved: false
+        isResolved: false,
+        waitHold: false // resolve promise on next release() if set
     };
     // keep a record of what cache ids this worker owns
     //  pool manager needs to make sure this mirrors worker state while avoiding polling/querying
@@ -31,19 +32,29 @@ export class PoolEntry extends Identifiable {
         const maintainOldPromise = oldResolve !== undefined && !state.isResolved;
         ({promise: state.promise, resolve: state.resolve, reject: state.reject} = Promise.withResolvers());
         state.isResolved = false;
+        state.waitHold = false;
         if (maintainOldPromise) state.promise.then(() => oldResolve());
     }
 
     setAvailable () {
-        this.#state.isResolved = true;
-        this.#state.resolve();
-        this.#regeneratePromise();
+        if (this.isWaiting) {
+            this.#state.waitHold = true;
+        } else {
+            this.#state.isResolved = true;
+            this.#state.resolve();
+            this.#regeneratePromise();
+        }
     }
     hold () {
         this.#wait = true;
     }
     release () {
         this.#wait = false;
+        if (this.#state.waitHold) {
+            this.#state.isResolved = true;
+            this.#state.resolve();
+            this.#regeneratePromise();
+        }
     }
 
     get isPoolEntry () { return true }

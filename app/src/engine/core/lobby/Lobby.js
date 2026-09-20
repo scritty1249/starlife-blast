@@ -177,7 +177,7 @@ export class Lobby {
                 assetPool.get(player.data.profile.avatar).clone(false),
                 id
             );
-            const metadata = new Metadata(model, profile, player.data.team);
+            const metadata = new Metadata(model, profile, player.data.team, player.data.ammo);
             const hittotal = HitTotal.fromObject(player.hitpoints, hitpointMap);
             const actor = new Actor(metadata, hittotal);
             actor.onload.then(() => {

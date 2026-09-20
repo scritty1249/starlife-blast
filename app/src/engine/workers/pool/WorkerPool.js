@@ -227,6 +227,24 @@ export class WorkerPool extends Identifiable {
             };
         });
     }
+    #decodeCache (payload) {
+        return Cache.TYPES.has(payload?.type)
+            ? Cache.decode(payload)
+            : null;
+    }
+    async #collectCaches (workerID, caches = []) {
+        const transfers = [];
+        for (const cache of caches)
+            transfers.push(this.copyCache(cache, cache, false, workerID));
+        await Promise.all(transfers);
+    }
+    claimWorker () {
+        return new WorkerEntryInstance(
+            this.#nextWorker(),
+            async (...args) => await this.#postJob(...args),
+            (...args) => this.#decodeCache(...args)
+        );
+    }
     cacheAt (cache) { // return id of worker that holds cache of given id
         return this.#cacheAt(cache)?.id;
     }
@@ -242,10 +260,7 @@ export class WorkerPool extends Identifiable {
     async post (type, payload, transfer = [], cachesUsed = []) {
         const caches = new Set(cachesUsed);
         const worker = this.#getPrioritizedWorker(caches);
-        const unownedCaches = caches.difference(worker.cache);
-        const transfers = [];
-        for (const cache of unownedCaches) transfers.push(this.copyCache(cache, cache, false, worker.id));
-        await Promise.all(transfers)
+        await this.#collectCaches(worker.id, caches.difference(worker.cache))
             .catch((e) => { console.warn(`[${typeString(this)}]: Failed to transfer cache(s) specified for worker job\n`, e)});
         return await this.#postJob(type, payload, transfer, "", worker) // don't dispose of transaction
             .then(({payload}) => Object.keys(payload).length === 0 ? undefined : payload ); // [!] getting empty objects instead of undefined for some reason on webworker response??
@@ -369,13 +384,14 @@ export class WorkerPool extends Identifiable {
             worker,
             true
         );
-        if (Cache.TYPES.has(payload?.type)) {
-            this.cache[source] = Cache.decode(payload);
+        const cache = this.#decodeCache(payload);
+        if (cache) {
+            this.cache[source] = cache;
         } else {
             // callers responsiblity to deal with the mess
             throw new Error(`[${typeString(this)}]: Worker ${worker.id} returned a cache of unknown type ${typeString(payload)}`);
         }
-        return true;
+        return this.cache[source];
     }
     // [!] creates a cache without checking if it already exists. Should only be used in controlled situations. For most cases, use setCache() to create new caches instead.
     async createCache (cache) {
@@ -411,4 +427,101 @@ export class WorkerPool extends Identifiable {
     get onload () { return this.#loadPromise }
     get #ready () { return this.#queue.filter(({isWaiting}) => !isWaiting) }
     get #available () { return this.#workers.filter(({isWaiting}) => !isWaiting) }
+}
+
+// Made to perform atomic operations without exposing access to a Worker's PoolEntry
+class WorkerEntryInstance extends Identifiable {
+    #entry;
+    #postCallback;
+    #decodeCallback;
+    constructor (
+        entry,
+        postJobCallback
+            = async (type, payload, transfer = [], command = "", worker = undefined, dispose = false) => {},
+        decodeCacheCallback
+            = (payload) => {}
+    ) {
+        super(entry.id);
+        this.#entry = entry;
+        this.#postCallback = postJobCallback;
+        this.#decodeCallback = decodeCacheCallback;
+        this.#entry.hold();
+    }
+
+    async #pullCache (id, clone) {
+        const { payload } = await this.#postCallback(
+            "", 
+            { clone, source: id, manager: true }, 
+            [],
+            "SENDCACHE",
+            this.#entry,
+            false
+        );
+        return this.#decodeCallback(payload);
+    }
+
+    async post (type = "", payload = {}, transfer = []) {
+        const { payload: data = {} } = await this.#postCallback(
+            type,
+            payload,
+            transfer,
+            "",
+            this.#entry,
+            false
+        );
+        return Object.keys(data).length === 0
+            ? undefined
+            : data;
+    }
+    async sendCache (id, entryInstance, clone = false) {
+        if (this.eq(entryInstance)) return;
+        await this.#postCallback(
+            "",
+            { clone, dest: id, source: id, worker: entryInstance.id, manager: false }, 
+            [],
+            "SENDCACHE",
+            this.#entry,
+            false
+        );
+    }
+    async putCache (cache) {
+        const data = await cache.encode();
+        await this.#postCallback(
+            "",
+            { cache: data }, 
+            data.buffers, 
+            "CREATECACHE",
+            this.#entry,
+            false
+        );
+    }
+    async dropCache (id) {
+        await this.#postCallback(
+            "", 
+            { target: id }, 
+            [], 
+            "DROPCACHE",
+            this.#entry,
+            false
+        );
+    }
+    async getCache (id) {
+        return await this.#pullCache(id, false);
+    }
+    async peekCache (id) {
+        return await this.#pullCache(id, true);
+    }
+    release () {
+        if (!this.isReleased) {
+            this.#entry.release();
+            this.#entry = null;
+        }
+    }
+
+    get isWorkerEntryInstance () { return true }
+    get isReleased () { return this.#entry === null }
+    get cache () { return new Set(this.#entry.cache) }
+    get jobs () { return new Set(this.#entry.jobs) }
+    get isBusy () { return this.#entry.isBusy }
+    get onAvailable () { return this.#entry.onAvailable }
 }
