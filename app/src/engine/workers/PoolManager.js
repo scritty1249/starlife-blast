@@ -163,29 +163,23 @@ export class PoolManager {
                 try {
                     // setup temp caches
                     await this.#pool.copyCache(terrainID, terrainID, false, geometryWorker.id);
-                    const canvasIDs = await Promise.all(Array.from(canvasCaches, (cache) => {
-                        return canvasWorker.putCache(cache).then(() => cache.id);
-                    }));
                     for (let i = 0; i < blastGroups.length; i++) {
                         const interval = blastGroups[i];
                         const prevTerrainID = terrainIDs[i];
                         const currTerrainID = terrainIDs[i + 1];
-                        const currCanvasID = canvasIDs[i];
 
                         rawTerrains[i] = await cutBlasts(geometryWorker, prevTerrainID, currTerrainID, interval, !!i);
-                        {
-                            // send a copy, then draw
-                            const index = i;
-                            const cid = currCanvasID;
-                            const tid = currTerrainID;
-                            const canvasWorker = this.#pool.claimWorker();
-                            await geometryWorker.sendCache(tid, canvasWorker, true);
-                            drawJobs.push(
-                                renderTerrain(canvasWorker, tid, cid)
-                                    .then((frame) => frames[index] = frame)
-                                    .finally(() => canvasWorker.release())
-                            );
-                        }
+                        const canvasCache = canvasCaches[i];
+                        const canvasWorker = this.#pool.claimWorker();
+                        await Promise.all([
+                            geometryWorker.sendCache(currTerrainID, canvasWorker, true),
+                            canvasWorker.putCache(canvasCache)
+                        ]);
+                        drawJobs.push(
+                            renderTerrain(canvasWorker, currTerrainID, canvasCache.id)
+                                .then((frame) => frames[i] = frame)
+                                .finally(() => canvasWorker.release())
+                        );
                     }
                     const terrains = rawTerrains.map((terrain) => Terrain.fromObject(terrain));
                     await Promise.all(drawJobs);
