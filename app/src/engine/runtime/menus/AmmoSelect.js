@@ -40,6 +40,7 @@ export class AmmoSelect extends Menu {
         this.#resetButtonPositions();
     }
     #resetButtonPositions () {
+        if (!this.InterfaceLayers.buttons.size) return;
         const { spacing, count, center } = this.store.layout;
         const coords = [];
         for (let q = -count; q <= count; q++) {
@@ -180,17 +181,16 @@ export class AmmoSelect extends Menu {
         const triple = 3 * layers;
         layout.count = Math.max(37, (triple * triple) - triple + 1);
         this.#createButtons(legLength);
+        layout.center = this.Parent.Global.Display.center;
+        layout.focal = layout.center.clone();
         if (!this.InterfaceLayers.buttons.size) return;
         const { shape } = this.InterfaceLayers.buttons.items[0];
-        
         layout.buttonSize = shape.globalTransform.scale.clone();
         layout.buttonSize.x *= Math.sqrt(3) * shape.length;
         layout.buttonSize.y *= 1.5 * shape.length;
         layout.spacing = layout.buttonSize.clone();
         layout.spacing.x += padding;
         layout.spacing.y += padding;
-        layout.center = this.Parent.Global.Display.center;
-        layout.focal = layout.center.clone();
 
         const totalSpace = layout.spacing.mul(layout.rings * 2 - 1);
         const halfSpace = totalSpace.div(2);
