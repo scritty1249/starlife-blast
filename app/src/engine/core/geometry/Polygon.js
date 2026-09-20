@@ -198,13 +198,13 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
                 newPolygon.path.set(polygons[0].path);
         }
         if (hole /* && !newPolygon.holes.some((h) => h.isInside(hole)) */) {
-            const { holes } = newPolygon;
-            const newHoles = holes.filter((h) => !hole.isInside(h));
-            if (newHoles.length !== holes.length) {
-                holes.splice(0, holes.length);
-                for (let i = 0; i < newHoles.length; i++)
-                    holes.push(newHoles[i]);
-            }
+            // const { holes } = newPolygon;
+            // const newHoles = holes.filter((h) => !hole.isInside(h));
+            // if (newHoles.length !== holes.length) {
+            //     holes.splice(0, holes.length);
+            //     for (let i = 0; i < newHoles.length; i++)
+            //         holes.push(newHoles[i]);
+            // }
             if (newPolygon.path.isClockwise === hole.path.isClockwise)
                 hole.path.points.reverse();
             newPolygon.holes.push(hole);
