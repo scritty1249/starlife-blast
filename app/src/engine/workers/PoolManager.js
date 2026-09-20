@@ -156,12 +156,10 @@ export class PoolManager {
             });
             if (this.#pool.size > 1) {
                 // [!] this will fail if there are less than 2 workers available
-                let drawJob = Promise.resolve();
-                const collectCanvasJobs = [];
-                const terrains = new Array(blastGroups.length);
+                const drawJobs = [];
+                const rawTerrains = new Array(blastGroups.length);
                 const frames = new Array(blastGroups.length);
                 const geometryWorker = this.#pool.claimWorker();
-                const canvasWorker = this.#pool.claimWorker();
                 try {
                     // setup temp caches
                     await this.#pool.copyCache(terrainID, terrainID, false, geometryWorker.id);
@@ -174,43 +172,23 @@ export class PoolManager {
                         const currTerrainID = terrainIDs[i + 1];
                         const currCanvasID = canvasIDs[i];
 
-                        const encodedCuts = interval
-                            .map(({ shape }) => shape.Polygon(1))
-                            .map((collider) => collider.Float32(collider.depth));
-                        const buffers = encodedCuts
-                            .map(({ buffers }) => buffers)
-                            .flat(1);
-                        const { terrain } = await geometryWorker.post(
-                            "CUTTERRAIN",
-                            {
-                                dest: currTerrainID,
-                                source: prevTerrainID,
-                                cuts: encodedCuts,
-                                callback: true, // will still cache the result
-                            },
-                            buffers
-                        );
-                        drawJob = drawJob
-                            .then(() => geometryWorker.sendCache(currTerrainID, canvasWorker, false))
-                            .then(() => canvasWorker.post(
-                                "DRAWTERRAIN",
-                                {
-                                    canvas: currCanvasID,
-                                    terrain: currTerrainID
-                                }
-                            ));
-                        drawJob.then(() => canvasWorker.dropCache(currTerrainID));
+                        rawTerrains[i] = await cutBlasts(geometryWorker, prevTerrainID, currTerrainID, interval, !!i);
                         {
+                            // send a copy, then draw
                             const index = i;
                             const cid = currCanvasID;
-                            const collectJob = drawJob
-                                .then(() => canvasWorker.getCache(cid)) // removes from worker
-                                .then((frame) => frames[index] = frame);
-                            terrains[index] = Terrain.fromObject(terrain);
-                            collectCanvasJobs.push(collectJob);
+                            const tid = currTerrainID;
+                            const canvasWorker = this.#pool.claimWorker();
+                            await geometryWorker.sendCache(tid, canvasWorker, true);
+                            drawJobs.push(
+                                renderTerrain(canvasWorker, tid, cid)
+                                    .then((frame) => frames[index] = frame)
+                                    .finally(() => canvasWorker.release())
+                            );
                         }
                     }
-                    await Promise.all([drawJob, Promise.all(collectCanvasJobs)]);
+                    const terrains = rawTerrains.map((terrain) => Terrain.fromObject(terrain));
+                    await Promise.all(drawJobs);
                     geometryWorker.release();
                     await this.updateCache(terrainID, true);
                     const intervals = Array.from(blastGroups, (group, i) => new BlastInterval(
@@ -221,8 +199,7 @@ export class PoolManager {
                     ));
                     return intervals;
                 } finally {
-                    geometryWorker.release();
-                    canvasWorker.release();
+                    if (!geometryWorker.isReleased) geometryWorker.release();
                 }
             } else {
                 // [!] old version, should work with as little as one thread.
@@ -299,4 +276,37 @@ export class PoolManager {
     get onload() {
         return this.#pool.onload;
     }
+}
+
+async function renderTerrain (canvasWorker, terrainID, canvasID) {
+    await canvasWorker.post(
+        "DRAWTERRAIN",
+        { canvas: canvasID, terrain: terrainID }
+    );
+    canvasWorker.dropCache(terrainID);
+    const frame = await canvasWorker.getCache(canvasID);
+    return frame;
+}
+
+// [!] returns encodeed terrain object
+async function cutBlasts (geometryWorker, sourceID, destID, blasts, dropSource) {
+    const cuts = blasts
+        .map(({ shape }) => shape.Polygon(1))
+        .map((collider) => collider.Float32(collider.depth));
+    const buffers = cuts
+        .map(({ buffers }) => buffers)
+        .flat(1);
+    const { terrain } = await geometryWorker.post(
+        "CUTTERRAIN",
+        {
+            dest: destID,
+            source: sourceID,
+            cuts: cuts,
+            callback: true, // will still cache the result
+        },
+        buffers
+    );
+    if (dropSource)
+        geometryWorker.dropCache(sourceID);
+    return terrain;
 }

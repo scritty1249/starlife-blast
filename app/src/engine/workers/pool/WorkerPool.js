@@ -429,6 +429,7 @@ export class WorkerPool extends Identifiable {
     get #available () { return this.#workers.filter(({isWaiting}) => !isWaiting) }
 }
 
+// Made to perform atomic operations without exposing access to a Worker's PoolEntry
 class WorkerEntryInstance extends Identifiable {
     #entry;
     #postCallback;
@@ -473,6 +474,7 @@ class WorkerEntryInstance extends Identifiable {
             : data;
     }
     async sendCache (id, entryInstance, clone = false) {
+        if (this.eq(entryInstance)) return;
         await this.#postCallback(
             "",
             { clone, dest: id, source: id, worker: entryInstance.id, manager: false }, 
@@ -510,13 +512,14 @@ class WorkerEntryInstance extends Identifiable {
         return await this.#pullCache(id, true);
     }
     release () {
-        if (this.#entry) {
+        if (!this.isReleased) {
             this.#entry.release();
             this.#entry = null;
         }
     }
 
     get isWorkerEntryInstance () { return true }
+    get isReleased () { return this.#entry === null }
     get cache () { return new Set(this.#entry.cache) }
     get jobs () { return new Set(this.#entry.jobs) }
     get isBusy () { return this.#entry.isBusy }
