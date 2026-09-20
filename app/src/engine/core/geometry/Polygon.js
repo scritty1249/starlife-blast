@@ -197,7 +197,7 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
             else if (polygons.length !== 0)
                 newPolygon.path.set(polygons[0].path);
         }
-        if (hole && !newPolygon.holes.some((h) => h.isInside(hole))) {
+        if (hole /* && !newPolygon.holes.some((h) => h.isInside(hole)) */) {
             const { holes } = newPolygon;
             const newHoles = holes.filter((h) => !hole.isInside(h));
             if (newHoles.length !== holes.length) {
