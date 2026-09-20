@@ -166,7 +166,6 @@ export class PoolManager {
                         const srcTerrainID = terrainIDs[i];
                         const destTerrainID = terrainIDs[i + 1];
                         rawTerrains[i] = await cutBlasts(geometryWorker, srcTerrainID, destTerrainID, blastGroups[i], !!i);
-                        console.debug(rawTerrains[i]);
                         const canvasWorker = this.#pool.claimWorker();
                         await geometryWorker.sendCache(destTerrainID, canvasWorker, true);
                         drawJobs.push(
