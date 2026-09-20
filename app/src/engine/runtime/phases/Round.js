@@ -442,7 +442,7 @@ export class Round extends Phase {
                 console.info(`[${typeString(this)}]: Turn playback finished`);
                 if (!this.flags.replaying && this.Lobby.Players.size > 1) this.endTurn();
                 this.endRecording();
-                setTimeout(() => this.setTurn(this.isClientTurn), 1000);
+                setTimeout(() => this.setTurn(this.isClientTurnHolder), 1000);
             }
         }
         if (this.flags.isTurn && !this.flags.turnEnded) {
@@ -466,7 +466,7 @@ export class Round extends Phase {
     start () {
         new Promise(async (resolve, reject) => {
             const { before: recording } = this.store.recording;
-            this.setTurn(this.isClientTurn);
+            this.setTurn(this.isClientTurnHolder);
             if (recording?.isTurnRecording) {
                 this.Global.Events.raiseEvent("LOADING", {hide: false});
                 if (recording.length)
@@ -1031,8 +1031,8 @@ export class Round extends Phase {
     get Random () { return this.#Random }
     get isPlaybackRunning () { return !!this.store.recording.current }
     get isAmmoSelected () { return !this.store.ammo.current && !!this.store.ammo.selected }
-    get isClientTurn () { return this.Lobby.Players.size === 1 || (this.Lobby.ActivePlayerID === this.#ClientPlayerID && !this.flags.turnEnded) }
-    get isClientActionAllowed () { return !this.isPlaybackRunning && this.isClientTurn }
+    get isClientTurnHolder () { return this.Lobby.Players.size === 1 || (this.Lobby.ActivePlayerID === this.#ClientPlayerID && !this.flags.turnEnded) }
+    get isClientActionAllowed () { return !this.isPlaybackRunning && this.isClientTurnHolder && this.flags.isTurn }
 }
 
 function createMuzzleFlashAnimation (playerActor, spritesheet, width) {
