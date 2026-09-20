@@ -90,11 +90,10 @@ export class Actor extends Loadable {
         const flipBarrel = (rotation < Math.PI * 2 && rotation > Math.PI);
         this.Puppet.draw(cursor, this.#puppetState.flipBody, flipBarrel);
     }
-    toJSON (...ammo) {
-        // [!] don't store aiming angle- save on backend storage, don't think anyone will notice/care... - KT
+    toJSON () {
         const payload = {
-            data: this.Metadata.toJSON(...ammo),
-            hitpoints: this.HitTotal.toJSON(),
+            data: this.Metadata.toJSON(),
+            hitpoints: this.HitTotal.toJSON().layers,
         };
         if (this.ready) {
             payload.position = this.Puppet.position.toJSON();

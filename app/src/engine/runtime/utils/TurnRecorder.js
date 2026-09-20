@@ -159,11 +159,9 @@ class TurnRecording {
     get final () { return this.states.reduce((acc, curr) => acc.union(curr), this.start) } // [!] horribly wasteful
     get duration () {
         // include time of any lingering blasts
-        let max = this.ammoMap.time;
-        for (const state of this.states) {
-            if (state.interval.delay > max)
-                max = state.interval.delay;
-        }
+        let max = this.ammoMap?.time || 0;
+        for (const { time } of this.states)
+            if (time > max) max = time;
         return max;
     }
     get intervals () { return this.states.map(({interval}) => interval) }

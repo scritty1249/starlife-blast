@@ -1,5 +1,3 @@
-import { Model } from "./model/Model.js";
-import { Profile } from "./Profile.js";
 import { Loadable } from "../load/Loadable.js";
 
 // wraps all loadable player data
@@ -9,22 +7,26 @@ export class Metadata extends Loadable {
     #Model;
     #loadPromise;
     #ready = false;
-    constructor (model, profile, team) {
+    #ammo = new Array();
+    constructor (model, profile, team, ammo = undefined) {
         super();
         this.#Profile = profile;
         this.#Model = model;
         this.#team = team;
+        if (ammo?.length)
+            for (const a of ammo)
+                this.ammo.push(a);
         this.#loadPromise = Promise.all([this.Profile.onload, this.Model.onload])
             .then(() => this.#ready = true)
             .then(() => this);
     }
 
-    toJSON (...ammoTypes) {
+    toJSON () {
         return {
             profile: this.Profile.toJSON(),
             model: this.Model.type,
             team: this.team,
-            ammo: [...ammoTypes]
+            ammo: Array.from(this.ammo)
         };
     }
 
@@ -34,4 +36,5 @@ export class Metadata extends Loadable {
     get Profile () { return this.#Profile }
     get Model () { return this.#Model }
     get team () { return this.#team }
+    get ammo () { return this.#ammo }
 }
