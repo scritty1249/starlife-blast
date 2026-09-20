@@ -12,17 +12,14 @@ export default class Digger extends AmmoType {
     static IMPORT = "Digger";
     static collisionCallback (point, normal, collisionFlags) {
         const { projectile } = this;
-        const direction = projectile.current.velocity.normalize();
         const doBlast = normal === undefined || normal.y >= 0 // only apply blasts and count bounces if normal is not negative (colliding surface faces up)
             || (collisionFlags & Properties.PLAYER); // or if hitting a player
         if (!(collisionFlags & Properties.STOP) && this.userData.bounces < this.userData.maxBounces) {
             if (doBlast) {
                 // update projectile
-                const reflection = projectile.current.velocity.apply(0,
-                        175 * (doBlast ? 1 : -1)
-                    ).clone();
+                projectile.velocity.apply(0, 175 * (doBlast ? 1 : -1));
                 projectile.drag = 0.002;
-                projectile.acceleration.y = 300;
+                projectile.ambient.y = -300;
                 const displace = normal
                     .mul(Math.max(...projectile.shape.getBoundingBox().size) / 2);
                 projectile.applyPosition(projectile.position.add(displace));
