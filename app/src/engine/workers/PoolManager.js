@@ -164,19 +164,14 @@ export class PoolManager {
                     // setup temp caches
                     await this.#pool.copyCache(terrainID, terrainID, false, geometryWorker.id);
                     for (let i = 0; i < blastGroups.length; i++) {
-                        const interval = blastGroups[i];
-                        const prevTerrainID = terrainIDs[i];
-                        const currTerrainID = terrainIDs[i + 1];
+                        const srcTerrainID = terrainIDs[i];
+                        const destTerrainID = terrainIDs[i + 1];
 
-                        rawTerrains[i] = await cutBlasts(geometryWorker, prevTerrainID, currTerrainID, interval, !!i);
-                        const canvasCache = canvasCaches[i];
+                        rawTerrains[i] = await cutBlasts(geometryWorker, srcTerrainID, destTerrainID, blastGroups[i], !!i);
                         const canvasWorker = this.#pool.claimWorker();
-                        await Promise.all([
-                            geometryWorker.sendCache(currTerrainID, canvasWorker, true),
-                            canvasWorker.putCache(canvasCache)
-                        ]);
+                        await geometryWorker.sendCache(destTerrainID, canvasWorker, true);
                         drawJobs.push(
-                            renderTerrain(canvasWorker, currTerrainID, canvasCache.id)
+                            renderTerrain(canvasWorker, canvasCaches[i], destTerrainID)
                                 .then((frame) => frames[i] = frame)
                                 .finally(() => canvasWorker.release())
                         );
@@ -272,13 +267,14 @@ export class PoolManager {
     }
 }
 
-async function renderTerrain (canvasWorker, terrainID, canvasID) {
+async function renderTerrain (canvasWorker, canvasCache, terrainID) {
+    await canvasWorker.putCache(canvasCache);
     await canvasWorker.post(
         "DRAWTERRAIN",
-        { canvas: canvasID, terrain: terrainID }
+        { canvas: canvasCache.id, terrain: terrainID }
     );
     canvasWorker.dropCache(terrainID);
-    const frame = await canvasWorker.getCache(canvasID);
+    const frame = await canvasWorker.getCache(canvasCache.id); // removes from worker memory
     return frame;
 }
 
