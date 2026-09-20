@@ -22,7 +22,7 @@ export default class Digger extends AmmoType {
                         175 * (doBlast ? 1 : -1)
                     ).clone();
                 projectile.drag = 0.002;
-                projectile.acceleration.y = -300;
+                projectile.acceleration.y = 300;
                 const displace = normal
                     .mul(Math.max(...projectile.shape.getBoundingBox().size) / 2);
                 projectile.applyPosition(projectile.position.add(displace));
