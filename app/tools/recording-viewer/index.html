@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Turn Recording Viewer</title>
+        <script type="module" src="./main.js"></script>
+        <link rel="stylesheet" href="style.css">
+    </head>
+    <body>
+        <div id="panel">
+            <label for="upload" id="upload-label" title="Upload turn recording">File upload</label>
+            <input type="file" id="upload" title="Upload turn recording"/>
+            <button id="prev" autocomplete="off" title="Next State" disabled></button>
+            <button id="next" autocomplete="off" title="Previous State" disabled></button>
+            <button id="reset" autocomplete="off" title="Start State" disabled></button>
+        </div>
+        <div id="viewer" class="empty">
+            <div class="info-card state">
+                <h3 class="title"></h3>
+                <p class="content"></p>
+            </div>
+            <canvas id="render"></canvas>
+            <div id="player-health"></div>
+        </div>
+        <div id="legend-container">
+            <input type="checkbox" id="legend-toggle" />
+            <label for="legend-toggle" id="legend-header">
+                <span class="header-title">Color Legend</span>
+                <span class="toggle-arrow">▼</span>
+            </label>
+            <div id="legend">
+                <h4>Symbols</h4>
+                <ul class="legend-list symbols"></ul>
+                <h4>Players</h4>
+                <ul class="legend-list players"></ul>
+            </div>
+        </div>
+    </body>
+</html>
