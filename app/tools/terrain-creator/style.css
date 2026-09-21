@@ -265,34 +265,6 @@ textarea {
 
 #controls-legend {
     position: fixed;
-    right: 2vw;
-    top: 50%;
-    transform: translateY(-50%);
-    background: var(--legend-background);
-    color: var(--foreground);
-    padding: 16px;
-    border-radius: 8px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.25);
-    border: 1px solid rgba(255, 255, 255, 0.08);
-    font-family: sans-serif;
-    pointer-events: none;
-    z-index: 1000;
-    width: clamp(180px, 15vw, 260px);
-    box-sizing: border-box;
-}
-
-#controls-legend h4 {
-    margin: 0 0 12px 0;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    color: var(--active);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    padding-bottom: 6px;
-}
-
-#controls-legend {
-    position: fixed;
     right: 1dvw;
     top: 50%;
     transform: translateY(-50%);
@@ -308,6 +280,16 @@ textarea {
     box-sizing: border-box;
     width: calc(11.5dvw);
     min-width: 150px;
+}
+
+#controls-legend h4 {
+    margin: 0 0 12px 0;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--active);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 6px;
 }
 
 #controls-toggle {
@@ -438,12 +420,13 @@ div.modal-buttons {
         user-select: none;
     }
 
-    #controls-toggle:not(:checked) ~ .controls-content {
-        display: none;
-    }
-
-    #controls-toggle:not(:checked) + #controls-header .toggle-arrow {
-        transform: rotate(-90deg);
+    #controls-toggle:not(:checked) {
+        ~ .controls-content {
+            display: none;
+        }
+        + #controls-header .toggle-arrow {
+            transform: rotate(0deg);
+        }
     }
 
     #controls-toggle:checked ~ .controls-content {
@@ -480,6 +463,7 @@ div.modal-buttons {
         font-size: 11px;
         color: var(--foreground);
         transition: transform 0.25s ease;
+        transform: rotate(180deg);
     }
 
     .controls-content {
