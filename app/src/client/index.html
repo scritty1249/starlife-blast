@@ -17,40 +17,6 @@
                 enumerable: true
             });
         </script>
-        <script>
-            (function checkCanvasBlurSupport() {
-                if (typeof window === "undefined") return;
-
-                let blurSupported = false;
-                const canvas = document.createElement("canvas");
-                const ctx = canvas?.getContext?.("2d");
-                if (ctx && ("filter" in ctx)) {
-                    try {
-                        canvas.width = 2;
-                        canvas.height = 1;
-                        ctx.filter = "blur(1px)";
-                        ctx.fillStyle = "#000000";
-                        ctx.fillRect(0, 0, 1, 1);
-                        const pixelData = ctx.getImageData(1, 0, 1, 1).data;
-                        blurSupported = pixelData[0] > 0
-                            || pixelData[1] > 0
-                            || pixelData[2] > 0
-                            || pixelData[3] > 0;
-                    } catch (e) {
-                        blurSupported = false;
-                    } finally {
-                        canvas.width = 0;
-                        canvas.height = 0;
-                    }
-                }
-                Object.defineProperty(window, "__CANVAS_BLUR_SUPPORTED", {
-                    value: blurSupported,
-                    writable: false,
-                    configurable: false,
-                    enumerable: true
-                });
-            })();
-        </script>
         <!-- SCRIPT_BUNDLE_TAG -->
     </head>
     <body>

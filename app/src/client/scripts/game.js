@@ -1,9 +1,15 @@
-import { Main } from "$engine/runtime/Core.js";
+import { Main, checkCanvasBlurSupport } from "$engine/runtime/Core.js";
 import { loading } from "./events/loading.js";
 import { notify } from "./events/notify.js";
 import { DiscordApp } from "./discord.js";
 import { ENDPOINT, getLobby } from "./api/api.js";
 
+Object.defineProperty(window, "__CANVAS_BLUR_SUPPORTED", {
+    value: checkCanvasBlurSupport(),
+    writable: false,
+    configurable: false,
+    enumerable: true
+});
 const LOBBY_ID_PREFIX = "LOBBY_";
 export const LOBBY_STATUS = {
     CLOSED: -1,
