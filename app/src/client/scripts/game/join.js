@@ -17,7 +17,7 @@ export default async function init (mainController, Discord, lobby, lobbyid, isH
             mainController.Events.raiseEvent("LOADING", {hide: true});
             if (success) {
                 console.info(`Lobby ${lobbyid} joined`);
-                mainController.Events.raiseEvent("NOTIFY", {severity: 1, message: "Joined lobby."});
+                mainController.Events.raiseEvent("NOTIFY", {severity: 1, message: "Joined lobby.", timeout: -1});
             } else {
                 mainController.Events.raiseEvent("NOTIFY", {severity: -2, message: `Something went wrong while joining the lobby. Close the game and try again in ${(RETRY_MIN_TIMEOUT_MS / 1000).toFixed(1)}s.`, timeout: RETRY_MIN_TIMEOUT_MS + 500});
                 setTimeout(() => phase.setJoinButtonVisibility(true), RETRY_MIN_TIMEOUT_MS);
