@@ -1,8 +1,6 @@
 export class BlobPacker {
     static HEADER_SIZE_OFFSET = 4; // 32-bit uint
-    static unpack (data, byteOffset = 0, byteLength = undefined) {
-        const { HEADER_SIZE_OFFSET } = BlobPacker;
-        
+    static unpack (data, byteOffset = 0, byteLength = undefined) {        
         const originalOffset = data.byteOffset || 0;
         const buffer = ArrayBuffer.isView(data) ? data.buffer : data;
 
@@ -12,7 +10,6 @@ export class BlobPacker {
             ? byteLength : (ArrayBuffer.isView(data)
                 ? data.byteLength
                 : data.byteLength - localOffset);
-
         return new BlobView(buffer, localOffset + originalOffset, localLength);
     }
     // close buffer if browser supports it
