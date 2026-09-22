@@ -46,7 +46,7 @@ export class Ammo extends Identifiable {
         if (!this.#isStarted) this.#isStarted = true;
         this.time += seconds;
         this.#currentStage?.update(seconds);
-        if (this.#currentStage?.isFinished) {
+        while (this.#currentStage?.isFinished) {
             if (this.hasNextStage) this.nextStage();
             else this.#currentStage = undefined;
         }

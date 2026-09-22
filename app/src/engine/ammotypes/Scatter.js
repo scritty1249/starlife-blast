@@ -21,8 +21,8 @@ export default class Scatter extends AmmoType {
     }
     static beamPreUpdateCallback (seconds) {
         const { target, range, driftX } = this.userData;
-        if (driftX === 0) return;
-        const { projectile, colliders } = this;
+        if (driftX === 0 || !target?.isVector) return;
+        const { projectile } = this;
         const { position, velocity, force } = projectile;
         const distanceX = target.x - position.x;
         const curveFactor = (velocity.y > 0 && position.y > target.y) || (velocity.y < 0 && position.y < target.y)
@@ -49,12 +49,22 @@ export default class Scatter extends AmmoType {
             stage.userData.range = range;
         });
     }
+    static cancelBeamStage (beamStage) {
+        const velocity = new Vector(0, 0);
+        const position = this.projectile.position.clone();
+        const time = this.time;
+        beamStage.shots.forEach((stage) => {
+            stage.projectile.applyOrigin(position, velocity);
+            stage.blastTimeOffset += time;
+        });
+    }
     static ballCollisionCallback (point, normal, collisionFlags) {
         this.projectile.velocity.mul(0, true);
-        if (collisionFlags === Properties.NONE) {
+        if (collisionFlags === Properties.NONE)
             this.userData.setupBeamStage(this.userData.target.clone());
-        } else {
+        else {
             createBlasts.call(this);
+            this.userData.cancelBeamStage();
         }
     }
     static ballUpdateCallback (seconds) {
@@ -127,6 +137,7 @@ export default class Scatter extends AmmoType {
             ballShot.userData = {
                 hitbox: [new Blast(new Circle(blastRadius), 0, 15)],
                 setupBeamStage: this.constructor.setupBeamStage.bind(ballShot, beamStage),
+                cancelBeamStage: this.constructor.cancelBeamStage.bind(ballShot, beamStage),
                 target: this.transferData.target
             };
             ballShot.collisionCallback = this.constructor.ballCollisionCallback;

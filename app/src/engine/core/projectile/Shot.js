@@ -170,7 +170,6 @@ export class Shot extends Identifiable {
                     return;
                 }
                 if (this.isTracing) {
-                    const { projectile } = this;
                     if (!this.#isFinished) {
                         this.preUpdateCallback?.(seconds);
                         this.#projectToCollision(seconds);
