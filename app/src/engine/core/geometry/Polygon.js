@@ -21,10 +21,11 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
     }
     static unpack (data) {
         const viewIterator = BlobPacker.unpack(data);
-        const metadata = BlobPacker.consumeAsObject(viewIterator);
+        const metadata = viewIterator.next().Object;
+        const depth = viewIterator.next().Number;
         const paths = viewIterator.next().value;
         const polygonObject = decodePolygon(metadata, paths);
-        return Polygon.fromObject(polygonObject);
+        return Polygon.fromObject(polygonObject, depth);
     }
     #id = generateUUID();
     #path;
@@ -390,6 +391,7 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
         const packer = new BlobPacker();
         const { metadata, path } = encodePolygon(this, 0);
         packer.push(metadata);
+        packer.push(this.depth);
         packer.push(path);
         return packer.pack();
     }
@@ -401,7 +403,12 @@ export class Polygon extends Hashable { // points should be ordered clockwise (i
     get depth () { // [!] can be dangerously expensive
         const holes = this.holes;
         if (!holes.length) return 0;
-        return 1 + Math.max(...holes.map(({depth}) => depth));
+        let max = 0;
+        for (let i = 0; i < holes.length; i++) {
+            const { depth = 0 } = holes[i];
+            if (max < depth) max = depth;
+        }
+        return 1 + max;
     }
     get center () { // mostly for debugging
         if (this.path.length === 0) return null;

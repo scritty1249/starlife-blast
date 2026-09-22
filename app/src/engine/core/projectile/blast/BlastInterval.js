@@ -8,7 +8,7 @@ import { typeString } from "../../utils/logging.js";
 export class BlastInterval {
     static unpack (data) {
         const viewIterator = BlobPacker.unpack(data);
-        const { d, b } = BlobPacker.consumeAsObject(viewIterator);
+        const { d, b } = viewIterator.next().Object;
         const blasts = b.map((blast) => Blast.decode(blast));
         const polygonView = viewIterator.next().value;
         const terrain = polygonView.byteLength
