@@ -8,7 +8,7 @@ class RoundState {
     }
     static unpack (data) {
         const viewIterator = BlobPacker.unpack(data);
-        const players = BlobPacker.consumeAsObject(viewIterator);
+        const players = viewIterator.next().Object;
         const states = Object.fromEntries(Object.entries(players).map(
             ([id, state]) => [id, ActorState.fromObject(state)]
         ));
@@ -116,7 +116,7 @@ class RoundState {
 class TurnRecording {
     static unpack (data) {
         const viewIterator = BlobPacker.unpack(data);
-        const metadata = BlobPacker.consumeAsObject(viewIterator);
+        const metadata = viewIterator.next().Object;
         const map = AmmoMap.fromObject(metadata.m);
         const other = new TurnRecording(metadata.p, metadata.a, map);
         for (const view of viewIterator) {
