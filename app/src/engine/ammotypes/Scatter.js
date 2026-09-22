@@ -22,7 +22,7 @@ export default class Scatter extends AmmoType {
     static beamPreUpdateCallback (seconds) {
         const { target, range, driftX } = this.userData;
         if (driftX === 0) return;
-        const { projectile, colliders } = this;
+        const { projectile } = this;
         const { position, velocity, force } = projectile;
         const distanceX = target.x - position.x;
         const curveFactor = (velocity.y > 0 && position.y > target.y) || (velocity.y < 0 && position.y < target.y)
