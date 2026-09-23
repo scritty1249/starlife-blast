@@ -39,7 +39,7 @@ export class Join extends Phase {
         this.store.avatarTileClipShape = new Equigon(6, 64);
         this.store.iconLayouts = [];
         this.store.joinButtons = [];
-        this.store.teamAvatarss = {};
+        this.store.teamAvatars = {};
         this.store.startButton = this.#createStartButton();
         const layout = new ItemLayout();
         layout.isColumn = true;
