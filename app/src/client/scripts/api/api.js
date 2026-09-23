@@ -6,8 +6,8 @@ export async function getLobby (lobbyid, userid) {
     if (!lobbyid) return;
     const response = await fetch(ENDPOINT + `/lobby/info?lobbyid=${lobbyid}&userid=${userid}`);
     if (response.ok) {
-        const { lobby = undefined, ishost: host = false } = await response.json();
-        return { lobby, host };
+        const { lobby = undefined, ishost: host = false, websocket = undefined } = await response.json();
+        return { lobby, host, websocket };
     }
 }
 

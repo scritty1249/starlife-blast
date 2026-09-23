@@ -72,7 +72,7 @@ export class DiscordApp {
         console.info("Discord SDK authenticated");
 
         await this.#getUserdata(auth?.user);
-        await this.#buildUserProfiles();
+        this.#buildUserProfiles();
         console.info("Discord SDK loaded");
     }
     async #authenticateSdk (token) {

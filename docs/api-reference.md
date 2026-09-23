@@ -83,6 +83,7 @@ The specified lobby's data, or null it does not exist.
 | :-- | :-- | :-- |
 | lobby | ?[Lobby](#object-lobby) ||
 | ishost | boolean | true if provided `userid` parameter matches id of lobby host. false otherwise |
+| websocket | [AuthorizedWebsocketPayload](#object-authorizedwebsocketpayload) | payload to connect to join phase websocket channel |
 
 ### `GET /lobby/auth`
 
@@ -100,7 +101,7 @@ The signed endpoint to download the lobby's terrain data.
 | Key | Type | Detail |
 | :-- | :-- | :-- |
 | terrain | [AuthorizedTerrainPayload](#object-authorizedterrainpayload) ||
-| websocket | [AuthorizedWebsocketPayload](#object-authorizedwebsocketpayload) ||
+| websocket | [AuthorizedWebsocketPayload](#object-authorizedwebsocketpayload) | payload to connect to round phase websocket channel |
 
 ### `POST /lobby/auth`
 Stages a round update, and generates an presigned link to upload the lobby's terrain data. 

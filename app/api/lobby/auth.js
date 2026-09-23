@@ -18,7 +18,7 @@ export async function GET (request) {
                 websocket: {
                     url: CONNECTION_URL,
                     key: CONNECTION_KEY,
-                    id: realtimeID
+                    id: realtimeID + "_ROUND"
                 }
             });
         } else {

@@ -39,6 +39,7 @@ export class Join extends Phase {
         this.store.avatarTileClipShape = new Equigon(6, 64);
         this.store.iconLayouts = [];
         this.store.joinButtons = [];
+        this.store.teamAvatarss = {};
         this.store.startButton = this.#createStartButton();
         const layout = new ItemLayout();
         layout.isColumn = true;
@@ -61,6 +62,7 @@ export class Join extends Phase {
                 teamLayout.push(joinButton);
                 this.store.joinButtons.push(joinButton);
             }
+            this.store.teamAvatars[teamid] = iconLayout;
             this.store.iconLayouts.push(iconLayout);
             this.store.teamLayouts.push(teamLayout);
         }
@@ -157,6 +159,18 @@ export class Join extends Phase {
     }
     setStartButtonVisibility (visible) {
         this.store.startButton.hide = !visible;
+    }
+    async addNewPlayer (avatar, team) {
+        if (team in this.store.teamAvatars) {
+            if (!this.AssetPool.has(avatar)) {
+                this.AssetPool.add(avatar, [this.Global.constructor.AssetType.Image, undefined, avatar]);
+                await this.AssetPool.onready(avatar);
+            }
+            this.store.teamAvatars[team].push(this.#createPlayerIcon(avatar));
+            return true;
+        } else {
+            return false;
+        }
     }
 
     get Lobby () { return this.#Lobby }

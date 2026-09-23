@@ -68,7 +68,7 @@ async function loadLobby (lobbyid, mainController, Discord) {
                 mainController.Events.raiseEvent("NOTIFY", {severity: -1, message: `The requested lobby does not exist. ID: ${lobbyid}`});
                 return;
             }
-            const { lobby, host } = response;
+            const { lobby, host, websocket: limboChannel } = response;
             mainController.Events.raiseEvent("LOADING", {hide: false, message: `Loading lobby menu`});
             if (lobby && "state" in lobby) {
                 if (lobby.state === 1) {
@@ -78,7 +78,7 @@ async function loadLobby (lobbyid, mainController, Discord) {
                 } else if (lobby.state === 0) {
                     console.debug(`Opening join screen for lobby ${lobbyid}`);
                     const { default: init } = await import("./game/join.js");
-                    return await init(mainController, Discord, lobby, lobbyid, host);
+                    return await init(mainController, Discord, lobby, lobbyid, host, limboChannel);
                 } else if (lobby.state === -1) {
                     mainController.Events.raiseEvent("NOTIFY", {severity: -1, message: `The requested lobby is has been closed. ID: ${lobbyid}`, timeout: -1});
                 }
