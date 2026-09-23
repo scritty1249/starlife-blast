@@ -101,7 +101,7 @@ export class Animation {
     get position () { return this.#position }
     get framerate () { return this.#framerate }
     get frame () { return this.#index }
-    set frame (index) { return this.#index = (this.loop ? index % this.#frames.length : Math.min(index, this.#frames.length - 1)) }
+    set frame (index) { return this.#index = (this.loop ? index % this.#frames.length : Math.min(index, this.#frames.length)) }
     get loop () { return this.#loop }
     set loop (bool) {
         if (bool && this.loop && this.#index > this.#frames.length)
