@@ -897,6 +897,7 @@ export class Round extends Phase {
     }
     endRecording () {
         if (this.isPlaybackRunning) this.#stopRecordingPlayback();
+        this.store.overlayItems.skipButton.hide = true;
         if (this.store.overlayItems.hideButton.active)
             this.store.overlayItems.replayButton.hide = false;
         else
@@ -1020,7 +1021,6 @@ export class Round extends Phase {
     }
     async launchAmmo () {
         try {
-            const { hideButton, replayButton } = this.store.overlayItems;
             this.setTurn(false);
             this.animate(true); // draw one last frame so the game doesn't look like it just froze
             this.Global.Events.raiseEvent("LOADING", {hide: false, message: "loading turn"});
