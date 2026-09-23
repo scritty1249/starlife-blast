@@ -1,9 +1,10 @@
 import {
     Phase,
     ItemLayout,
-    Icon,
+    Equigon,
     HexaButton
 } from "../../core/Core.js";
+import { AvatarTileIcon } from "../selections/AvatarTileIcon.js";
 import { initLobby } from "../utils.js";
 import { drawMenuItemRulers } from "../debug/draw.js";
 
@@ -35,6 +36,7 @@ export class Join extends Phase {
     }
     #setupInterface () {
         const { isClientInLobby } = this;
+        this.store.avatarTileClipShape = new Equigon(6, 64);
         this.store.iconLayouts = [];
         this.store.joinButtons = [];
         this.store.startButton = this.#createStartButton();
@@ -49,7 +51,7 @@ export class Join extends Phase {
             iconLayout.gap = 10;
             for (const player of team) {
                 const { avatar: key } = player.data.profile;
-                const avatar = new Icon(this.AssetPool.get(key).clone(false));
+                const avatar = this.#createPlayerIcon(key);
                 iconLayout.push(avatar);
             }
             teamLayout.push(iconLayout);
@@ -72,6 +74,12 @@ export class Join extends Phase {
             // [!] TODO: add leave button
         }
         this.store.lobbyElements = layout;
+    }
+    #createPlayerIcon (avatarKey) {
+        const image = this.AssetPool.get(avatarKey).clone(false);
+        const shape = this.store.avatarTileClipShape;
+        image.width = shape.length * 2;
+        return new AvatarTileIcon(image, shape);
     }
     #createJoinButton (teamid) {
         const { DEFAULT_FONT, FONT_SIZE } = this.Global.store;
