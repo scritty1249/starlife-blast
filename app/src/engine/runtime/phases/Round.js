@@ -16,7 +16,7 @@ import {
     Icon,
     Random,
     Polygon,
-    AmmoMap
+    HexaButton
 } from "../../core/Core.js"
 
 import { WorkerPool, PoolManager, TerrainCache, CanvasCache } from "../../workers/Core.js";
@@ -87,7 +87,9 @@ export class Round extends Phase {
     #Terrain;
     #Random;
     #Animations = {
-        Main: new AnimationList()
+        Main: new AnimationList(),
+        Recording: new AnimationList(),
+        Blasts: new AnimationList(),
     };
     constructor (mainController, playerID, lobbyData, turnData, lobbyid, firstTurn = false) {
         super(mainController);
@@ -152,6 +154,12 @@ export class Round extends Phase {
         this.flags.turnEnded = false;
         this.flags.replaying = false;
 
+        {
+            const { Main, Recording, Blasts } = this.Animations;
+            Recording.push(Blasts);
+            Main.push(Recording);
+        }
+
         this.Camera.Viewbox.bounding.top = false;
         this.#setupSFX();
         this.#setupInterface();
@@ -176,6 +184,7 @@ export class Round extends Phase {
             this.loadGlobalAsset("selectBtn"),
             this.loadGlobalAsset("fireBtn"),
             this.loadGlobalAsset("replayBtn"),
+            this.loadGlobalAsset("skipBtn"),
             this.loadGlobalAsset("hideActiveBtn"),
             this.loadGlobalAsset("hideInactiveBtn"),
         ];
@@ -256,6 +265,7 @@ export class Round extends Phase {
         const selectImg = this.AssetPool.get("selectBtn");
         const fireImg = this.AssetPool.get("fireBtn");
         const replayImg = this.AssetPool.get("replayBtn");
+        const skipImg = this.AssetPool.get("skipBtn");
         const hideActiveImg = this.AssetPool.get("hideActiveBtn");
         const hideInactiveImg = this.AssetPool.get("hideInactiveBtn");
         const moveLeftBtn = new IconButton(new Icon(moveImg.clone(false)));
@@ -263,10 +273,14 @@ export class Round extends Phase {
         moveRightBtn.icon.source.scale.apply(-1, 1);
         moveRightBtn.icon.source.origin.apply(moveImg.rawSize.x, 0);
         const launchButton = new IconButton(new Icon(fireImg.clone(false)));
+        launchButton.hide = true;
         const selectButton = new IconButton(new Icon(selectImg.clone(false)));
         const replayButton = new IconButton(new Icon(replayImg.clone(false)));
+        const skipButton = new IconButton(new Icon(skipImg.clone(false)));
+        skipButton.userData.skipHiding = true;
+        skipButton.hide = true;
         const hideButton = new ToggleIconButton(new Icon(hideActiveImg.clone(false)), new Icon(hideInactiveImg.clone(false)));
-        hideButton.userData.isHideButton = true;
+        hideButton.userData.skipHiding = true;
 
         const { Mover } = this.ClientPlayer;
         const { store, flags } = this;
@@ -302,29 +316,35 @@ export class Round extends Phase {
                     .then(({player, ammo, impacts}) => this.playRecording(recording, ammo, player, impacts));
             }
         };
+        skipButton.onclick = () => {
+            if (this.isPlaybackRunning) {
+                this.skipRecording();
+                skipButton.hide = true;
+            }
+        }
         hideButton.onclick = () => {
             if (hideButton.active) {
                 for (const item of Object.values(this.store.overlayItems)) {
-                    if (item.userData?.isHideButton) continue;
+                    if (item.userData?.skipHiding) continue;
                     item.userData.lastHideState = !!item.hide;
                     item.hide = true;
                 }
             } else {
                 for (const item of Object.values(this.store.overlayItems)) {
-                    if (item.isHideButton) continue;
+                    if (item.userData?.skipHiding) continue;
                     item.hide = item.userData.lastHideState;
                 }
             }
             hideButton.toggle();
         }
 
-        launchButton.hide = true;
         this.store.overlayItems = {
             moveLeftBtn,
             moveRightBtn,
             launchButton,
             selectButton,
             replayButton,
+            skipButton,
             hideButton
         };
         this.Interface.insert()
@@ -377,7 +397,6 @@ export class Round extends Phase {
         ammo.current = undefined;
         ammo.map = undefined;
         ammo.impacts = [];
-        delete this.Animations.blasts;
     }
     #createLaunchCallback () {
         const self = this;
@@ -395,7 +414,7 @@ export class Round extends Phase {
                 self.AssetPool.get("muzzleFlash").clone(),
                 muzzleFlashSize
             );
-            self.Animations.Main.push(muzzleFlash);
+            self.Animations.Recording.push(muzzleFlash);
             muzzleFlash.play();
             self.Audio.Player.add(self.AssetPool.get("fire").Instance().play(), true);
         }
@@ -405,7 +424,7 @@ export class Round extends Phase {
             player,
             this.AssetPool.get("explosion").clone()
         );
-        this.Animations.Main.push(deathExplosion);
+        this.Animations.Blasts.push(deathExplosion);
         deathExplosion.play();
     }
     #createBlastImpact (roundState) {
@@ -435,10 +454,22 @@ export class Round extends Phase {
         });
         return impact;
     }
+    #stopRecordingPlayback () {
+        const { recording } = this.store;
+        if (recording.current?.isTurnRecording) {
+            recording.previous = recording.current;
+            recording.current = undefined;
+        }
+        this.#unsetAmmo();
+        this.Animations.Blasts.clear(); // remove nested AnimationLists from BlastIntervals
+        this.Animations.Recording.flush(true);
+        this.flags.replaying = false;
+    }
 
     async ontick (delta) {
-        if (this.store.ammo.current) {
-            if (this.updateAmmoTick(delta)) {
+        this.Animations.Main.update(delta);
+        if (this.isPlaybackRunning) {
+            if (this.updateRecordingTick(delta)) {
                 console.info(`[${typeString(this)}]: Turn playback finished`);
                 if (!this.flags.replaying && this.Lobby.Players.size > 1) this.endTurn();
                 this.endRecording();
@@ -500,7 +531,7 @@ export class Round extends Phase {
         if (store.ammo.tracer) store.ammo.tracer.draw(cursor);
         if (store.ammo.current && store.ammo.current.time > 0)
             store.ammo.current.draw(cursor);
-        Animations.Main.update(cursor);
+        Animations.Main.draw(cursor);
         for (const player of Players.values())
             player.drawOverlay(cursor, player.id === this.#ClientPlayerID, flags.isTurn);
         cursor.restore();
@@ -522,6 +553,7 @@ export class Round extends Phase {
             launchButton,
             selectButton,
             replayButton,
+            skipButton,
             hideButton
         } = this.store.overlayItems;
         const padding = size.min() / 20;
@@ -535,6 +567,7 @@ export class Round extends Phase {
             = hideButton.activeIcon.source.width
             = hideButton.inactiveIcon.source.width
             = Math.min(100, targetWidth);
+        skipButton.icon.source.width = Math.min(75, targetWidth);
 
         const baselineY = moveRightBtn.height + padding;
         if (Display.isPortrait) {
@@ -579,6 +612,10 @@ export class Round extends Phase {
         hideButton.setPosition(
             padding,
             size.y - padding
+        );
+        skipButton.setPosition(
+            (size.x / 2) - (skipButton.width / 2),
+            baselineY + skipButton.height + padding
         );
     }
     drawDebugOverlay () {
@@ -679,10 +716,13 @@ export class Round extends Phase {
         Camera.setTargetSize(size.x, size.y, true);
         Camera.track(Puppet.position);
     }
+    updateRecordingTick (delta = 0) {
+        const ammoFinished = !this.store.ammo.current || this.updateAmmoTick(delta);
+        const animationsFinished = this.Animations.Recording.ended;
+        return ammoFinished && animationsFinished;
+    }
     updateAmmoTick (delta = 0) {
-        const { Animations } = this;
         const { ammo } = this.store;
-        const blastAnimationsFinished = (!Animations.blasts || Animations.blasts.ended);
         // trigger blast animations
         for (const impact of ammo.impacts) {
             if (impact.triggered) continue;
@@ -691,32 +731,15 @@ export class Round extends Phase {
         // update projectile
         ammo.current.update(delta / 1000);
         // are we done with projectile?
-        const endProjectileEarly =
-            (ammo.current.time >= SHOT_TRACE_LIMIT) // time out shots even if a landing exists
-            || ((!ammo.map.finished || Animations.blasts.ended)
-                // time out early if theres no landing and it flew offscreen
-                //  or if all the blasts are done, and it flew offscreen
-                && !ammo.current.isInsideDisplay);
-        const isTimedout =
-            !(ammo.map.finished && ammo.current.time >= ammo.map.time - Number.EPSILON)
-            && endProjectileEarly;
-
-        if (endProjectileEarly) {
-            if (!blastAnimationsFinished) {
-                // play any paused blast animations prematurely
-                // shouldn't restart already playing animations
-                Animations.blasts?.play?.();
-            }
-            if (this.Global.flags.DEBUG) {
-                if (isTimedout) console.info(`[${typeString(this)}]: Shot timed out`);
-                else console.info(`[${typeString(this)}]: Shot forcefully ended early`);
-            }
+        const neverLanding = !ammo.map.finished && !ammo.current.isInsideDisplay; // [!] Home run! Where'd it go?
+        const isComplete = ammo.current.time >= ammo.map.time - Number.EPSILON;
+        const isFinished = neverLanding || isComplete;
+        if (isFinished) {
+            if (this.Global.flags.DEBUG && !isFinished && neverLanding)
+                console.info(`[${typeString(this)}]: Shot timed out`);
             ammo.current = undefined;
+            return true;
         }
-        // [!] boolean logic here could be written better -KT
-        const playbackFinished = Animations.blasts?.ended
-            || (!Animations.blasts && isTimedout);
-        return playbackFinished;
     }
     drawMenuBackground () {
         const { cursor, size } = this.Global.Display;
@@ -861,18 +884,21 @@ export class Round extends Phase {
             = overlayItems.selectButton.hide
             = false;
     }
+    skipRecording () {
+        const { current } = this.store.recording;
+        if (!this.isPlaybackRunning) return;
+        this.#stopRecordingPlayback();
+        const state = current.final;
+        this.updateTerrain(state.terrain);
+        state.applyActors(this.Players);
+        this.endRecording();
+    }
     endRecording () {
-        const { recording } = this.store;
-        if (recording.current?.isTurnRecording) {
-            recording.previous = recording.current;
-            recording.current = undefined;
-        }
-        this.#unsetAmmo();
+        if (this.isPlaybackRunning) this.#stopRecordingPlayback();
         if (this.store.overlayItems.hideButton.active)
             this.store.overlayItems.replayButton.hide = false;
         else
             this.store.overlayItems.replayButton.userData.lastHideState = false;
-        this.flags.replaying = false;
     }
     // expects recording to already be rendered
     async loadRecording (recording) {
@@ -903,27 +929,27 @@ export class Round extends Phase {
     async playRecording (recording, ammo, activePlayer, blastImpacts, setup = true) {
         this.Global.Events.raiseEvent("LOADING", {hide: false});
         if (recording.length) {
-            const { start, end } = recording;
+            const currentTerrainHash = await this.Threaded.hashCache(this.store.cacheKey.terrain);
+            const { start, final } = recording;
             if (this.Terrain.hash !== start.terrain.hash)
                 this.updateTerrain(start.terrain, false);
             if (setup)
                 this.displayState(start);
-            if (end.terrain)
-                await this.Threaded.setCache(new TerrainCache(end.terrain, this.store.cacheKey.terrain));
+            if (final.terrain.hash !== currentTerrainHash)
+                await this.Threaded.setCache(new TerrainCache(final.terrain, this.store.cacheKey.terrain));
         }
-        this.Animations.blasts = new AnimationList();
         this.store.ammo.impacts = [];
         for (const impact of blastImpacts) {
-            this.Animations.blasts.push(...impact.Animations);
+            this.Animations.Blasts.push(impact.Animations);
             this.store.ammo.impacts.push(impact);
         }
-        this.Animations.Main.push(...this.Animations.blasts);
         ammo.displayBoundingBox = this.Camera.Viewbox;
         this.Global.Events.raiseEvent("LOADING", {hide: true});
         this.#setAmmo(ammo, recording.ammoMap);
         this.store.recording.current = recording;
         this.Camera.track(ammo.getBoundingBox(true, false, true));
         if (activePlayer?.isActor) this.Camera.track(activePlayer.Puppet.getBoundingBox());
+        this.store.overlayItems.skipButton.hide = false;
         console.info(`[${typeString(this)}]: Playing turn recording`);
     }
     async renderRecording (recording) {
@@ -1029,7 +1055,7 @@ export class Round extends Phase {
     get Terrain () { return this.#Terrain }
     get Animations () { return this.#Animations }
     get Random () { return this.#Random }
-    get isPlaybackRunning () { return !!this.store.recording.current }
+    get isPlaybackRunning () { return !!this.store.recording.current?.isTurnRecording }
     get isAmmoSelected () { return !this.store.ammo.current && !!this.store.ammo.selected }
     get isClientTurnHolder () { return this.Lobby.Players.size === 1 || (this.Lobby.ActivePlayerID === this.#ClientPlayerID && !this.flags.turnEnded) }
     get isClientActionAllowed () { return !this.isPlaybackRunning && this.isClientTurnHolder && this.flags.isTurn }

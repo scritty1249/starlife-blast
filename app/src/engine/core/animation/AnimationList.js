@@ -6,17 +6,29 @@ export class AnimationList {
         this.push(...animations);
     }
 
+    // cleans up ended animations
+    #trim () {
+        const animations = this.#animations.filter((ani) => !ani.ended || ani.isAnimationList);
+        if (animations.length === this.length) return;
+        this.#animations.splice(0, this.length);
+        for (let i = 0; i < animations.length; i++)
+            this.#animations.push(animations[i]);
+    }
+
+    // accepts AnimationLists and Animations
     push (...animations) {
         for (const animation of animations) {
-            if (animation?.isAnimationList) this.push(...animation);
-            else if (!animation?.isAnimation) throw new Error(`[${typeString(this)}] Error: Cannot add non-animation of type ${typeString(animation)}`);
+            if (!animation?.isAnimationList && !animation?.isAnimation)
+                throw new Error(`[${typeString(this)}] Error: Cannot add non-animation of type ${typeString(animation)}`);
             else this.#animations.push(animation);
-        }        
+        }
     }
-    update (cursor) {
-        const animations = this.#animations.filter((ani) => !ani.ended);
-        this.#animations.splice(0, this.length);
-        this.#animations.push(...animations);
+    update (delta) {
+        this.#trim();
+        this.#animations.forEach((ani) => ani.update(delta));
+    }
+    draw (cursor) {
+        this.#trim();
         this.#animations.forEach((ani) => ani.draw(cursor));
     }
     play () {
@@ -29,9 +41,44 @@ export class AnimationList {
             ani.pause();
         return this;
     }
-
+    // removes everything, including AnimationLists
+    clear () {
+        this.#animations.splice(0, this.length);
+        return this;
+    }
+    // removes all Animations, keeps AnimationLists
+    // depth parameter dictates nested AnimationList recursion depth
+    // setitng depth to non-numeric truthy value will recurse through all children
+    flush (depth = 0) {
+        const animations = this.#animations.filter((ani) => ani.isAnimationList);
+        if (animations.length !== this.length) {
+            this.#animations.splice(0, this.length);
+            for (let i = 0; i < animations.length; i++)
+                this.#animations.push(animations[i]);
+        }
+        if (depth) {
+            const d = Number.isFinite(depth) ? depth - 1 : !!depth;
+            animations.forEach((ani) => ani.flush(d));
+        }
+        return this;
+    }
+    // returns all animations recursively
+    *flatten () {
+        for (let i = 0; i < this.length; i++) {
+            const ani = this.#animations[i];
+            if (ani.isAnimationList) yield* ani.flatten();
+            else yield ani;
+        }
+    }
+    // returns all AnimationLists recursively
+    *children () {
+        for (let i = 0; i < this.length; i++) {
+            const ani = this.#animations[i];
+            if (ani.isAnimationList) yield ani;
+        }
+    }
     *[Symbol.iterator]() {
-        yield *this.#animations;
+        yield* this.#animations;
     }
 
     get isAnimationList () { return true }
