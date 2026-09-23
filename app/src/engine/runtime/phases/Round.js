@@ -903,9 +903,7 @@ export class Round extends Phase {
         this.#stopRecordingPlayback();
         const state = current.final;
         this.updateTerrain(state.terrain);
-        if (state.interval.frame)
-            this.Threaded.cache[this.store.cacheKey.background] = state.interval.frame;
-        state.applyActors(this.Players);
+        this.displayState(state);
         this.endRecording();
     }
     endRecording () {
