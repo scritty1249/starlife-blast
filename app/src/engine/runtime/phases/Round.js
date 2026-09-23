@@ -153,6 +153,7 @@ export class Round extends Phase {
         this.store.turnBefore = undefined;
         this.flags.turnEnded = false;
         this.flags.replaying = false;
+        this.flags.lockLaunch = false;
 
         {
             const { Main, Recording, Blasts } = this.Animations;
@@ -168,10 +169,7 @@ export class Round extends Phase {
             if (!selection?.isAmmoTypeDetails) return;
             this.store.ammo.selected = selection.id;
             this.store.turnOverlayItems.launchButton.text = selection.name;
-            if (this.store.turnOverlayItems.hideButton.active)
-                this.store.turnOverlayItems.launchButton.hide = false;
-            else
-                this.store.turnOverlayItems.launchButton.userData.lastHideState = false;
+            this.isLaunchAllowed = !this.flags.lockLaunch;
         })
     }
     async #load (playerID) {
@@ -296,7 +294,7 @@ export class Round extends Phase {
             }
         };
         launchButton.onclick = () => {
-            if (this.isClientActionAllowed && this.isAmmoSelected)
+            if (this.isLaunchAllowed)
                 this.launchAmmo();
         };
         selectButton.onclick = () => {
@@ -807,8 +805,8 @@ export class Round extends Phase {
 
             // keyboard
             if (!INPUT_MAP.isActive(keyboard, "debug+")) {
-                if (this.isAmmoSelected) {
-                    if (INPUT_MAP.isActive(keyboard, "shootActive"))
+                if (INPUT_MAP.isActive(keyboard, "shootActive")) {
+                    if (this.isLaunchAllowed)
                         this.launchAmmo();
                 }
                 ClientPlayer.Puppet.position.round(1/Global.constructor.SETTINGS.RESOLUTION);
@@ -1073,6 +1071,14 @@ export class Round extends Phase {
     get isAmmoSelected () { return !this.store.ammo.current && !!this.store.ammo.selected }
     get isClientTurnHolder () { return this.Lobby.Players.size === 1 || (this.Lobby.ActivePlayerID === this.#ClientPlayerID && !this.flags.turnEnded) }
     get isClientActionAllowed () { return !this.isPlaybackRunning && this.isClientTurnHolder && this.flags.isTurn }
+    get isLaunchAllowed () { return !this.flags.lockLaunch && this.isAmmoSelected && this.isClientActionAllowed }
+    set isLaunchAllowed (bool) {
+        this.flags.lockLaunch = !bool;
+        if (this.store.turnOverlayItems.hideButton.active)
+            this.store.turnOverlayItems.launchButton.userData.lastHideState = !this.isLaunchAllowed;
+        else
+            this.store.turnOverlayItems.launchButton.hide = !this.isLaunchAllowed;
+    }
 }
 
 function createMuzzleFlashAnimation (playerActor, spritesheet, width) {

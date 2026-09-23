@@ -20,6 +20,7 @@ export default async function init (mainController, Discord, lobby, lobbyid) {
     phase.Events.addEventListener("TURNENDED", async (changes) => {
         if (saveTurnLock) return;
         saveTurnLock = true;
+        phase.isLaunchAllowed = false;
         mainController.Events.raiseEvent("NOTIFY", {severity: 0, message: "Saving turn..."});
         const { turns } = phase.Lobby;
         const success = await updateLobby(changes, lobbyid, Discord.user.id);
@@ -29,6 +30,7 @@ export default async function init (mainController, Discord, lobby, lobbyid) {
         } else {
             mainController.Events.raiseEvent("NOTIFY", {severity: -2, message: "Failed to save turn! Relaunch activity and try again.", timeout: 5500});
         }
+        phase.isLaunchAllowed = true;
         saveTurnLock = false;
     }, { once: !isAlone });
     if (ws) {
