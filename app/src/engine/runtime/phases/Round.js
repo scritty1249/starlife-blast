@@ -113,7 +113,7 @@ export class Round extends Phase {
         this.#load(playerID)
             .then(() => this.#init())
             .then(async () => {
-                const { replayButton } = this.store.overlayItems;
+                const { replayButton } = this.store.turnOverlayItems;
                 if (recording) {
                     // play previous turn animation
                     await this.renderRecording(recording);
@@ -167,11 +167,11 @@ export class Round extends Phase {
         this.Menus.get("Ammo").Events.addEventListener("CLOSE", ({selection}) => {
             if (!selection?.isAmmoTypeDetails) return;
             this.store.ammo.selected = selection.id;
-            this.store.overlayItems.launchButton.text = selection.name;
-            if (this.store.overlayItems.hideButton.active)
-                this.store.overlayItems.launchButton.hide = false;
+            this.store.turnOverlayItems.launchButton.text = selection.name;
+            if (this.store.turnOverlayItems.hideButton.active)
+                this.store.turnOverlayItems.launchButton.hide = false;
             else
-                this.store.overlayItems.launchButton.userData.lastHideState = false;
+                this.store.turnOverlayItems.launchButton.userData.lastHideState = false;
         })
     }
     async #load (playerID) {
@@ -276,11 +276,10 @@ export class Round extends Phase {
         launchButton.hide = true;
         const selectButton = new IconButton(new Icon(selectImg.clone(false)));
         const replayButton = new IconButton(new Icon(replayImg.clone(false)));
-        const skipButton = new IconButton(new Icon(skipImg.clone(false)));
-        skipButton.userData.skipHiding = true;
-        skipButton.hide = true;
         const hideButton = new ToggleIconButton(new Icon(hideActiveImg.clone(false)), new Icon(hideInactiveImg.clone(false)));
         hideButton.userData.skipHiding = true;
+        const skipButton = new IconButton(new Icon(skipImg.clone(false)));
+        skipButton.hide = true;
 
         const { Mover } = this.ClientPlayer;
         const { store, flags } = this;
@@ -326,13 +325,13 @@ export class Round extends Phase {
         }
         hideButton.onclick = () => {
             if (hideButton.active) {
-                for (const item of Object.values(this.store.overlayItems)) {
+                for (const item of Object.values(this.store.turnOverlayItems)) {
                     if (item.userData?.skipHiding) continue;
                     item.userData.lastHideState = !!item.hide;
                     item.hide = true;
                 }
             } else {
-                for (const item of Object.values(this.store.overlayItems)) {
+                for (const item of Object.values(this.store.turnOverlayItems)) {
                     if (item.userData?.skipHiding) continue;
                     item.hide = item.userData.lastHideState;
                 }
@@ -340,14 +339,16 @@ export class Round extends Phase {
             hideButton.toggle();
         }
 
-        this.store.overlayItems = {
+        this.store.turnOverlayItems = {
             moveLeftBtn,
             moveRightBtn,
             launchButton,
             selectButton,
             replayButton,
-            skipButton,
             hideButton
+        };
+        this.store.hudOverlayItems = {
+            skipButton
         };
         this.Interface.insert()
             .push(underButton)
@@ -358,7 +359,10 @@ export class Round extends Phase {
             .fixed = false;
         // overlay buttons
         this.Interface.insert()
-            .push(...Object.values(this.store.overlayItems))
+            .push(...Object.values(this.store.hudOverlayItems))
+            .fixed = true;
+        this.Interface.insert()
+            .push(...Object.values(this.store.turnOverlayItems))
             .fixed = true;
         this.resizeOverlay();
     }
@@ -540,7 +544,8 @@ export class Round extends Phase {
         for (const player of Players.values())
             player.drawOverlay(cursor, player.id === this.#ClientPlayerID, flags.isTurn);
         cursor.restore();
-        if (flags.isTurn) Interface.draw(cursor, 2);
+        Interface.draw(cursor, 2, 3);
+        if (flags.isTurn) Interface.draw(cursor, 3);
         if (this.Global.flags.DEBUG) this.drawDebugOverlay();
     }
     onResize () {
@@ -553,14 +558,16 @@ export class Round extends Phase {
         const { Display } = this.Global;
         const { size } = Display;
         const {
+            skipButton
+        } = this.store.hudOverlayItems;
+        const {
             moveLeftBtn,
             moveRightBtn,
             launchButton,
             selectButton,
             replayButton,
-            skipButton,
             hideButton
-        } = this.store.overlayItems;
+        } = this.store.turnOverlayItems;
         const padding = size.min() / 20;
         const targetWidth = size.x / 10
         moveRightBtn.icon.source.width
@@ -705,7 +712,7 @@ export class Round extends Phase {
         cursor.fixed = true;
         cursor.strokeStyle = "red";
         cursor.lineWidth = 2;
-        for (const item of Object.values(this.store.overlayItems)) {
+        for (const item of Object.values(this.store.turnOverlayItems)) {
             cursor.save();
             item.getBoundingBox?.()?.draw?.(cursor);
             cursor.stroke();
@@ -866,13 +873,13 @@ export class Round extends Phase {
         if (this.flags.turnEnded) return;
         this.flags.turnEnded = true;
         
-        const { overlayItems } = this.store;
+        const { turnOverlayItems } = this.store;
         this.ClientPlayer.Aimer.hide
-            = overlayItems.hideButton.hide
-            = overlayItems.moveLeftBtn.hide
-            = overlayItems.moveRightBtn.hide
-            = overlayItems.launchButton.hide
-            = overlayItems.selectButton.hide
+            = turnOverlayItems.hideButton.hide
+            = turnOverlayItems.moveLeftBtn.hide
+            = turnOverlayItems.moveRightBtn.hide
+            = turnOverlayItems.launchButton.hide
+            = turnOverlayItems.selectButton.hide
             = true;
     }
     // call when saving turn fails
@@ -880,13 +887,13 @@ export class Round extends Phase {
         if (!this.flags.turnEnded) return;
         this.flags.turnEnded = false;
         
-        const { overlayItems } = this.store;
+        const { turnOverlayItems } = this.store;
         this.ClientPlayer.Aimer.hide
-            = overlayItems.hideButton.hide
-            = overlayItems.moveLeftBtn.hide
-            = overlayItems.moveRightBtn.hide
-            = overlayItems.launchButton.hide
-            = overlayItems.selectButton.hide
+            = turnOverlayItems.hideButton.hide
+            = turnOverlayItems.moveLeftBtn.hide
+            = turnOverlayItems.moveRightBtn.hide
+            = turnOverlayItems.launchButton.hide
+            = turnOverlayItems.selectButton.hide
             = false;
     }
     skipRecording () {
@@ -902,11 +909,11 @@ export class Round extends Phase {
     }
     endRecording () {
         if (this.isPlaybackRunning) this.#stopRecordingPlayback();
-        this.store.overlayItems.skipButton.hide = true;
-        if (this.store.overlayItems.hideButton.active)
-            this.store.overlayItems.replayButton.hide = false;
+        this.store.hudOverlayItems.skipButton.hide = true;
+        if (this.store.turnOverlayItems.hideButton.active)
+            this.store.turnOverlayItems.replayButton.hide = false;
         else
-            this.store.overlayItems.replayButton.userData.lastHideState = false;
+            this.store.turnOverlayItems.replayButton.userData.lastHideState = false;
     }
     // expects recording to already be rendered
     async loadRecording (recording) {
@@ -936,8 +943,8 @@ export class Round extends Phase {
     }
     async playRecording (recording, ammo, activePlayer, blastImpacts, setup = true) {
         this.Global.Events.raiseEvent("LOADING", {hide: false});
-        if (this.store.overlayItems.hideButton.active) this.store.overlayItems.replayButton.hide = true;
-        else this.store.overlayItems.replayButton.userData.lastHideState = true;
+        if (this.store.turnOverlayItems.hideButton.active) this.store.turnOverlayItems.replayButton.hide = true;
+        else this.store.turnOverlayItems.replayButton.userData.lastHideState = true;
         if (recording.length) {
             const currentTerrainHash = await this.Threaded.hashCache(this.store.cacheKey.terrain);
             const { start, final } = recording;
@@ -959,7 +966,7 @@ export class Round extends Phase {
         this.store.recording.current = recording;
         this.Camera.track(ammo.getBoundingBox(true, false, true));
         if (activePlayer?.isActor) this.Camera.track(activePlayer.Puppet.getBoundingBox());
-        this.store.overlayItems.skipButton.hide = false;
+        this.store.hudOverlayItems.skipButton.hide = false;
         console.info(`[${typeString(this)}]: Playing turn recording`);
     }
     async renderRecording (recording) {
