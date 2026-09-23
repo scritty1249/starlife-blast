@@ -3,26 +3,22 @@ import { Animation } from "./Animation.js";
 export class ShapeAnimation extends Animation {
     #shape;
     #drawFn; // (cursor, shape, progress, ...args) => {}
-    #duration; // stored for cloning
-    #framerate; // stored for cloning
     #drawArgs;
     // duration in seconds
     constructor (shape, duration, framerate, drawFn = (cursor, shape, progress) => {}, drawArgs = []) {
         const totalFramesCount = Math.ceil(duration * framerate);
         super(shape.origin, Array.from({length: totalFramesCount}), framerate);
         this.#shape = shape;
-        this.#duration = duration;
         this.#drawFn = drawFn?.bind(this);
         this.#drawArgs = drawArgs;
     }
 
     draw (cursor) {
-        super.draw(cursor);
-        if (this.progress > 0) this.#drawFn?.(cursor, this.#shape, this.progress, ...this.#drawArgs);
-
+        if (this.progress > 0)
+            this.#drawFn?.(cursor, this.#shape, this.progress, ...this.#drawArgs);
     }
     clone () {
-        const ani = new ShapeAnimation(this.#shape.clone(), this.#duration, this.#framerate, this.#drawFn);
+        const ani = new ShapeAnimation(this.#shape.clone(), this.duration, this.framerate, this.#drawFn);
         ani.speed = this.speed;
         if (this.playing) ani.play();
         return ani;

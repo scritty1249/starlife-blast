@@ -3,7 +3,7 @@ import { Vector } from "../math/Vector.js";
 // all time in milliseconds
 export class Animation {
     #position = new Vector();
-    #frame = undefined;
+    #frame = null;
     #index = 0;
     #time = {
         current: 0,
@@ -53,14 +53,17 @@ export class Animation {
         const previous = this.#time.current;
         this.#time.current += delta;
         const frames = Math.floor(this.#delta / this.#interval);
-        if (frames) {
+        if (frames > 0) {
             this.frame += frames;
-            this.#time.drawn = previous + (this.#framerate * frames);
+            this.#time.drawn = previous + (this.framerate * frames);
             this.#frame = this.#frames.at(this.frame);
         }
     }
     draw (cursor) {
-        if (this.#frame && this.#delta >= 0) this.#frame.draw(cursor, this.position);
+        if (this.#frame !== null && this.#delta >= 0) {
+            this.#frame.draw(cursor, this.position);
+            return true;
+        }
     }
     next () {
         if (this.ended) return undefined;
@@ -79,7 +82,7 @@ export class Animation {
         return this; // for chaining
     }
     clone () { // Clones by reference
-        const ani = new Animation (this.position, this.#frames.clone(), this.#framerate * 1000);
+        const ani = new Animation (this.position, this.#frames.clone(), this.framerate * 1000);
         ani.speed = this.speed;
         if (this.playing) ani.play();
         return ani;
@@ -96,6 +99,7 @@ export class Animation {
     get duration () { return this.#framerate * this.#frames.length }
     get elapsed () { return this.progress * this.duration }
     get position () { return this.#position }
+    get framerate () { return this.#framerate }
     get frame () { return this.#index }
     set frame (index) { return this.#index = (this.loop ? index % this.#frames.length : Math.min(index, this.#frames.length - 1)) }
     get loop () { return this.#loop }
