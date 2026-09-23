@@ -85,5 +85,5 @@ export class AnimationList {
     get playing () { return this.#animations.some((ani) => ani.playing) }
     get length () { return this.#animations.length }
     get onend () { return Promise.all(this.#animations.map((ani) => ani.onend)) }
-    get ended () { return this.#animations.every((ani) => ani.ended) || !this.length }
+    get ended () { return !this.length || this.#animations.every((ani) => ani.ended) }
 }
