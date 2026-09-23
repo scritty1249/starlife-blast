@@ -318,8 +318,10 @@ export class Round extends Phase {
         };
         skipButton.onclick = () => {
             if (this.isPlaybackRunning) {
-                this.skipRecording();
                 skipButton.hide = true;
+                this.skipRecording();
+                console.info(`[${typeString(this)}]: Turn playback skipped`);
+                this.setTurn(this.isClientTurnHolder);
             }
         }
         hideButton.onclick = () => {
@@ -928,6 +930,8 @@ export class Round extends Phase {
     }
     async playRecording (recording, ammo, activePlayer, blastImpacts, setup = true) {
         this.Global.Events.raiseEvent("LOADING", {hide: false});
+        if (this.store.overlayItems.hideButton.active) this.store.overlayItems.replayButton.hide = true;
+        else this.store.overlayItems.replayButton.userData.lastHideState = true;
         if (recording.length) {
             const currentTerrainHash = await this.Threaded.hashCache(this.store.cacheKey.terrain);
             const { start, final } = recording;
@@ -1024,8 +1028,6 @@ export class Round extends Phase {
             this.Events.raiseEvent("TURNENDED", this.export(recording));
             const { player, ammo, impacts } = await this.loadRecording(recording);
             this.Global.Events.raiseEvent("LOADING", {hide: true});
-            if (hideButton.active) replayButton.hide = true;
-            else replayButton.userData.lastHideState = true;
             await this.playRecording(recording, ammo, player, impacts, false);
         } catch (err) {
             console.error(`[${typeString(this)}]: Projectile trace error`);
