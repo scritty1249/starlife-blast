@@ -52,7 +52,7 @@ export class Animation {
         }
         const previous = this.#time.current;
         this.#time.current += delta;
-        const frames = Math.floor(this.#delta / this.#interval);
+        const frames = Math.floor(this.delta / this.interval);
         if (frames > 0) {
             this.frame += frames;
             this.#time.drawn = previous + (this.framerate * frames);
@@ -60,7 +60,7 @@ export class Animation {
         }
     }
     draw (cursor) {
-        if (this.#frame !== null && this.#delta >= 0) {
+        if (this.#frame !== null && this.delta >= 0) {
             this.#frame.draw(cursor, this.position);
             return true;
         }
@@ -89,7 +89,7 @@ export class Animation {
     }
 
     get isAnimation () { return true }
-    get hasNext () { return this.#delta >= this.#interval && this.playing && !this.ended }
+    get hasNext () { return this.delta >= this.interval && this.playing && !this.ended }
     get playing () { return !this.paused }
     get paused () { return this.#paused }
     get ended () { return this.frame >= this.#frames.length && !this.loop }
@@ -108,6 +108,6 @@ export class Animation {
             this.#index = 0;
         return (this.#loop = bool);
     }
-    get #delta () { ((this.#time.current / this.speed) - this.delay) - (this.#time.drawn / this.speed) }
-    get #interval () { return this.#framerate / this.speed }
+    get interval () { return this.framerate / this.speed }
+    get delta () { return ((this.#time.current / this.speed) - this.delay) - (this.#time.drawn / this.speed) }
 }
