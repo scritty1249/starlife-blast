@@ -169,7 +169,10 @@ export class Round extends Phase {
             if (!selection?.isAmmoTypeDetails) return;
             this.store.ammo.selected = selection.id;
             this.store.turnOverlayItems.launchButton.text = selection.name;
-            this.isLaunchAllowed = !this.flags.lockLaunch;
+            if (this.store.turnOverlayItems.hideButton.active)
+                this.store.turnOverlayItems.launchButton.hide = false;
+            else
+                this.store.turnOverlayItems.launchButton.userData.lastHideState = false;
         })
     }
     async #load (playerID) {
@@ -1072,13 +1075,7 @@ export class Round extends Phase {
     get isClientTurnHolder () { return this.Lobby.Players.size === 1 || (this.Lobby.ActivePlayerID === this.#ClientPlayerID && !this.flags.turnEnded) }
     get isClientActionAllowed () { return !this.isPlaybackRunning && this.isClientTurnHolder && this.flags.isTurn }
     get isLaunchAllowed () { return !this.flags.lockLaunch && this.isAmmoSelected && this.isClientActionAllowed }
-    set isLaunchAllowed (bool) {
-        this.flags.lockLaunch = !bool;
-        if (this.store.turnOverlayItems.hideButton.active)
-            this.store.turnOverlayItems.launchButton.userData.lastHideState = !this.isLaunchAllowed;
-        else
-            this.store.turnOverlayItems.launchButton.hide = !this.isLaunchAllowed;
-    }
+    set isLaunchAllowed (bool) { return (this.flags.lockLaunch = !bool) }
 }
 
 function createMuzzleFlashAnimation (playerActor, spritesheet, width) {
