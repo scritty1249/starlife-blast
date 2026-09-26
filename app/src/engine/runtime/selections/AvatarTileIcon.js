@@ -13,12 +13,12 @@ export class AvatarTileIcon extends Icon {
     #updateShapePosition () {
         const { shape } = this;
         const { transform } = shape;
-        const shapeHash = shape.hash;
-        const imageHash = super.getBoundingBox().hash;
-        if (true || shapeHash !== this.#shapeHash || imageHash !== this.#imageHash) {
+        const { hash: shapeHash, center: shapeCenter } = shape.hash;
+        const { hash: imageHash, center: imageCenter } = super.getBoundingBox();
+        if (!shapeCenter.eq(imageCenter) || shapeHash !== this.#shapeHash || imageHash !== this.#imageHash) {
             this.#shapeHash = shapeHash;
             this.#imageHash = imageHash;
-            const offset = super.getBoundingBox().center.sub(shape.center, true);
+            const offset = imageCenter.sub(shapeCenter, true);
             transform.save();
             transform.reset();
             transform.offset.apply(offset);
