@@ -13,7 +13,7 @@ export class AvatarTileIcon extends Icon {
     #updateShapePosition () {
         const { shape } = this;
         const { transform } = shape;
-        const { hash: shapeHash, center: shapeCenter } = shape.hash;
+        const { hash: shapeHash, center: shapeCenter } = shape;
         const { hash: imageHash, center: imageCenter } = super.getBoundingBox();
         if (!shapeCenter.eq(imageCenter) || shapeHash !== this.#shapeHash || imageHash !== this.#imageHash) {
             this.#shapeHash = shapeHash;
