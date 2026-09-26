@@ -15,7 +15,7 @@ export class AvatarTileIcon extends Icon {
         const { transform } = shape;
         const shapeHash = shape.hash;
         const imageHash = super.getBoundingBox().hash;
-        if (shapeHash !== this.#shapeHash || imageHash !== this.#imageHash) {
+        if (true || shapeHash !== this.#shapeHash || imageHash !== this.#imageHash) {
             this.#shapeHash = shapeHash;
             this.#imageHash = imageHash;
             const offset = super.getBoundingBox().center.sub(shape.center, true);
