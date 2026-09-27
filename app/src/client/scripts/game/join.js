@@ -96,7 +96,7 @@ async function joinButtonHander (phase, lobbyid, teamid, userprofile, eventCallb
             console.info(`${successStr} joined`);
             websocket.send("JOINED", { player: userprofile, teamid });
             await phase.addNewPlayer(userprofile.userid, userprofile.avatar, teamid);
-            eventCallback("NOTIFY", {severity: 1, message: `Joined ${subjectStr}.`, timeout: -1});
+            eventCallback("NOTIFY", {severity: 1, message: `Joined ${subjectStr}.`, timeout: RETRY_MIN_TIMEOUT_MS * 2});
         } else {
             eventCallback("NOTIFY", {severity: -2, message: `Something went wrong while ${errorStr}. Close the activity and try again in ${(RETRY_MIN_TIMEOUT_MS / 1000).toFixed(1)}s.`, timeout: RETRY_MIN_TIMEOUT_MS + 500});
             setTimeout(() => phase.setJoinButtonVisibility(true), RETRY_MIN_TIMEOUT_MS);
