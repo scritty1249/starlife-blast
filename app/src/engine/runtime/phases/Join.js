@@ -200,12 +200,14 @@ export class Join extends Phase {
         const { isPortrait, center } = this.Global.Display;
         const { lobbyElements, teamElements, teamLayouts } = this.store;
         const { bounding } = this.Camera.Viewbox;
+        const notPortrait = !isPortrait;
         teamLayouts.isColumn = isPortrait;
-        for (const iconLayout of teamElements.values().map(({avatars}) => avatars)) {
-            iconLayout.isColumn = !isPortrait;
-        }
+        for (const teamLayout of teamLayouts.children())
+            teamLayout.isColumn = notPortrait;
+        for (const iconLayout of teamElements.values().map(({avatars}) => avatars))
+            iconLayout.isColumn = notPortrait;
         lobbyElements.setPosition(center.x - (lobbyElements.width / 2), center.y + (lobbyElements.height / 2));
-        bounding.left = bounding.right = !isPortrait;
+        bounding.left = bounding.right = notPortrait;
         bounding.top = bounding.bottom = isPortrait;
     }
     async computeLayout () {
