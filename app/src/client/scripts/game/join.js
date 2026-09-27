@@ -52,7 +52,7 @@ export default async function init (mainController, Discord, lobby, lobbyid, isH
                 if (success) {
                     ws.send("LEFT", {userid: userprofile.userid});
                     await phase.removePlayer(userprofile.userid);
-                    mainController.Events.raiseEvent("NOTIFY", {severity: 1, message: "Left lobby.", timeout: -1});
+                    mainController.Events.raiseEvent("NOTIFY", {severity: 1, message: "Left lobby.", timeout: RETRY_MIN_TIMEOUT_MS * 2});
                 } else {
                     mainController.Events.raiseEvent("NOTIFY", {severity: -1, message: "Failed to leave lobby.", timeout: 1500});
                     setTimeout(() => phase.setLeaveButtonVisibility(!phase.isClientHost), RETRY_MIN_TIMEOUT_MS);
