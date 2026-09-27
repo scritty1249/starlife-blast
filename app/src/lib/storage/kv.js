@@ -455,7 +455,7 @@ async function getPlayerTeam (id, playerid, consistentRead = false) {
             TableName: process.env.AWS_DB,
             Key: { [PK]: id },
             ProjectionExpression: "players.#playerId.#metadata.#team",
-            ExpressionAttributeNames: names,
+            ExpressionAttributeNames: attributeNames,
             ConsistentRead: !!consistentRead
         }));
         return result.Item
