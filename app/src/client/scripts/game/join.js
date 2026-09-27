@@ -15,7 +15,7 @@ export default async function init (mainController, Discord, lobby, lobbyid, isH
     phase.Events.addEventListener("START", async () => {
         try {
             if (requestLock) {
-                mainController.Events.raiseEvent("NOTIFY", {severity: 1, message: "Sending requests too fast! Please wait...", timeout: RETRY_MIN_TIMEOUT_MS});
+                mainController.Events.raiseEvent("NOTIFY", {severity: -1, message: "Sending requests too fast! Please wait...", timeout: RETRY_MIN_TIMEOUT_MS});
                 return;
             }
             requestLock = true;
@@ -29,7 +29,7 @@ export default async function init (mainController, Discord, lobby, lobbyid, isH
                 Discord.closeApp("Lobby started");
             } else {
                 mainController.Events.raiseEvent("NOTIFY", {severity: -1, message: "Failed to start lobby.", timeout: 1500});
-                setTimeout(() => phase.setStartButtonVisibility(phase.isClientHost), 1500);
+                setTimeout(() => phase.setStartButtonVisibility(phase.isClientHost), RETRY_MIN_TIMEOUT_MS);
             }
         } catch (err) {
             console.error(err);
@@ -60,7 +60,7 @@ async function joinButtonHander (phase, lobbyid, teamid, userprofile, eventCallb
     const apiArg = isNew ? userprofile : userprofile.userid;
     try {
         if (requestLock) {
-            eventCallback("NOTIFY", {severity: 1, message: "Sending requests too fast! Please wait...", timeout: RETRY_MIN_TIMEOUT_MS});
+            eventCallback("NOTIFY", {severity: -1, message: "Sending requests too fast! Please wait...", timeout: RETRY_MIN_TIMEOUT_MS});
             return;
         }
         requestLock = true;

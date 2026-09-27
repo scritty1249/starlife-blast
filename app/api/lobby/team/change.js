@@ -11,7 +11,7 @@ export async function POST (request) {
             const success = await changePlayerTeam(lobbyid, userid, teamid);
             return Response.json({ success });
         } else {
-            return new Response("Cannot join an active lobby.", {status: 403, statusText: "Cannot join an active lobby."});
+            return new Response("Cannot change teams in an active lobby.", {status: 403, statusText: "Cannot join an active lobby."});
         }
     } catch (error) {
         return Responses.error(error);

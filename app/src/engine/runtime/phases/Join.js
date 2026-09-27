@@ -116,7 +116,8 @@ export class Join extends Phase {
         return button;
     }
     async #onjoin (teamid) {
-        this.Events.raiseEvent("JOIN", { team: teamid });
+        const event = this.getPlayerTeam(this.ClientPlayerID) === undefined ? "JOIN" : "DEFECT";
+        this.Events.raiseEvent(event, { team: teamid });
     }
     #onstart () {
         if (this.isClientHost) {
