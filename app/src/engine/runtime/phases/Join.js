@@ -246,7 +246,7 @@ export class Join extends Phase {
             if (this.#isPlayerInLobbyCache(userid))
                 this.#removePlayerFromTeam(userid);
             this.store.LobbyCache.Teams.get(team).set(userid, avatar);
-            this.updateInterfaceElements();
+            this.updateLayout();
             return true;
         } else {
             return false;
