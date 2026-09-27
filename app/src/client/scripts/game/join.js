@@ -9,8 +9,9 @@ export default async function init (mainController, Discord, lobby, lobbyid, isH
     const phase = await mainController.loadJoinPhase(lobby, isHost);
     const ws = new LobbyEventListener(websocketPayload.key, websocketPayload.id, Discord.user.id);
     const userprofile = Discord.profiles.get(Discord.user.id);
-    phase.Events.addEventListener("JOIN", ({team}) => joinButtonHander(phase, lobbyid, team, userprofile, mainController.Events.raiseEvent, ws, true), { once: false });
-    phase.Events.addEventListener("DEFECT", ({team}) => joinButtonHander(phase, lobbyid, team, userprofile, mainController.Events.raiseEvent, ws, false), { once: false });
+    const eventCallback = (...args) => mainController.Events.raiseEvent(...args);
+    phase.Events.addEventListener("JOIN", ({team}) => joinButtonHander(phase, lobbyid, team, userprofile, eventCallback, ws, true), { once: false });
+    phase.Events.addEventListener("DEFECT", ({team}) => joinButtonHander(phase, lobbyid, team, userprofile, eventCallback, ws, false), { once: false });
     phase.Events.addEventListener("START", async () => {
         try {
             if (requestLock) {
