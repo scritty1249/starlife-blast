@@ -446,16 +446,23 @@ export async function closeLobby (id) {
 
 async function getPlayerTeam (id, playerid, consistentRead = false) {
     try {
+        const attributeNames = {
+            "#playerId": playerid,
+            "#team": "team",
+            "#metadata": "data"
+        };
         const result = await docClient.send(new GetCommand({
             TableName: process.env.AWS_DB,
             Key: { [PK]: id },
-            ProjectionExpression: "players.#playerId.data.team",
-            ExpressionAttributeNames: {
-                "#playerId": playerid
-            },
+            ProjectionExpression: "players.#playerId.#metadata.#team",
+            ExpressionAttributeNames: names,
             ConsistentRead: !!consistentRead
         }));
-        return result.Item?.players?.[playerid]?.data?.team;
+        return result.Item
+            ?.players
+            ?.[attributeNames["#playerId"]]
+            ?.[attributeNames["#metadata"]]
+            ?.[attributeNames["#team"]];
     } catch (error) {
         console.error(error);
         return undefined;
