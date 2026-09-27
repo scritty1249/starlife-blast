@@ -41,6 +41,7 @@ export class Join extends Phase {
         this.store.avatarTileClipShape = new Equigon(6, 64);
         this.store.teamElements = new Map();
         this.store.startButton = this.#createStartButton();
+        this.store.leaveButton = this.#createLeaveButton();
         const layout = new ItemLayout();
         layout.isColumn = true;
         this.store.teamLayouts = new ItemLayout();
@@ -71,6 +72,7 @@ export class Join extends Phase {
         }
         layout.push(this.store.teamLayouts);
         layout.push(this.store.startButton);
+        layout.push(this.store.leaveButton);
         this.Interface.insert()
             .push(layout)
             .fixed = true;
@@ -115,9 +117,35 @@ export class Join extends Phase {
         button.hide = !this.isClientHost;
         return button;
     }
+    #createLeaveButton () {
+        const { DEFAULT_FONT, FONT_SIZE } = this.Global.store;
+        const button = new HexaButton(20, 60);
+        const { width, height } = button.getBoundingBox();
+        button.fontSize = FONT_SIZE;
+        button.fontFamily = DEFAULT_FONT.family;
+        button.originOffset.apply(-width / 2, height / 2);
+        button.fillColor.apply(200, 0, 0, 1);
+        button.fontColor.apply(0, 0, 0, 1);
+        button.text = "Leave Lobby";
+        button.onclick = () => {
+            this.setLeaveButtonVisibility(false);
+            this.#onleave();
+        }
+        button.hide = this.isClientHost;
+        return button;
+    }
     async #onjoin (teamid) {
         const event = this.getPlayerTeam(this.ClientPlayerID) === undefined ? "JOIN" : "DEFECT";
         this.Events.raiseEvent(event, { team: teamid });
+    }
+    async #onleave () {
+        if (this.isClientHost) {
+            console.warn("Cannot leave lobby. Client user is lobby host");
+        } else if (!this.isPlayerInLobby(userid)) {
+            console.warn("Cannot leave lobby. Client user is not in lobby");
+        } else {
+            this.Events.raiseEvent("LEAVE");
+        }
     }
     #onstart () {
         if (this.isClientHost) {
@@ -140,7 +168,13 @@ export class Join extends Phase {
         }
         return false;
     }
+    #isPlayerInLobbyCache (userid) {
+        return this.store.LobbyCache.Teams.values().some((t) => t.has(userid));
+    }
 
+    isPlayerInLobby (userid, includeCache = true) {
+        return this.Lobby.Players.has(userid) || (includeCache && this.#isPlayerInLobbyCache(userid));
+    }
     getPlayerAvatar (userid) {
         for (const players of this.store.LobbyCache.Teams.values()) {
             if (players.has(userid))
@@ -200,13 +234,16 @@ export class Join extends Phase {
     setStartButtonVisibility (visible) {
         this.store.startButton.hide = !visible;
     }
+    setLeaveButtonVisibility (visible) {
+        this.store.leaveButton.hide = !visible;
+    }
     async addNewPlayer (userid, avatar, team) {
         if (this.store.LobbyCache.Teams.has(team)) {
             if (!this.AssetPool.has(avatar)) {
                 this.AssetPool.add(avatar, [this.Global.constructor.AssetType.Image, undefined, avatar]);
                 await this.AssetPool.onready(avatar);
             }
-            if (this.getPlayerTeam(userid))
+            if (this.#isPlayerInLobbyCache(userid))
                 this.#removePlayerFromTeam(userid);
             this.store.LobbyCache.Teams.get(team).set(userid, avatar);
             this.updateInterfaceElements();
@@ -218,6 +255,6 @@ export class Join extends Phase {
 
     get Lobby () { return this.#Lobby }
     get ClientPlayerID () { return this.#ClientPlayerID }
-    get isClientInLobby () { return this.Lobby.Players.has(this.ClientPlayerID) }
+    get isClientInLobby () { return this.isPlayerInLobby(this.ClientPlayerID, true) }
     get isClientHost () { return this.#isClientHost }
 }
