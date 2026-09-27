@@ -202,7 +202,7 @@ export class Join extends Phase {
         const { bounding } = this.Camera.Viewbox;
         const notPortrait = !isPortrait;
         teamLayouts.isColumn = isPortrait;
-        for (const teamLayout of teamLayouts.children())
+        for (const teamLayout of teamLayouts.children)
             teamLayout.isColumn = notPortrait;
         for (const iconLayout of teamElements.values().map(({avatars}) => avatars))
             iconLayout.isColumn = notPortrait;
