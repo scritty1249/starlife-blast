@@ -94,7 +94,7 @@ async function joinButtonHander (phase, lobbyid, teamid, userprofile, eventCallb
         eventCallback("LOADING", {hide: true});
         if (success) {
             console.info(`${successStr} joined`);
-            websocket.send("JOINED", { player: userprofile, teamid: team });
+            websocket.send("JOINED", { player: userprofile, teamid });
             await phase.addNewPlayer(userprofile.userid, userprofile.avatar, teamid);
             eventCallback("NOTIFY", {severity: 1, message: `Joined ${subjectStr}.`, timeout: -1});
         } else {
