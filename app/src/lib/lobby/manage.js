@@ -128,6 +128,12 @@ export async function addPlayer (lobbyid, playerProfile, team) {
     return Boolean(result);
 }
 
+export async function removePlayer (lobbyid, userid) {
+    if (!lobbyid || !userid) return false;
+    const result = await KV.removePlayer(lobbyid, userid);
+    return Boolean(result);
+}
+
 export async function changePlayerTeam (lobbyid, userid, team) {
     if (!lobbyid || !team || !userid) return false;
     const result = await KV.changePlayerTeam(lobbyid, userid, team);

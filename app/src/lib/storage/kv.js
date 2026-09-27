@@ -229,17 +229,43 @@ export async function addPlayer (id, teamid, playerInstance) {
     }
 }
 
-export async function changePlayerTeam (id, playerid, teamid) {
-    const result = await docClient.send(new GetCommand({
+export async function removePlayer (id, playerid) {
+    const teamid = await getPlayerTeam(id, playerid, false);
+    if (teamid === undefined) {
+        console.error(`Player ${playerid} does not exist in lobby ${id}.`);
+        return false;
+    }
+    const command = {
         TableName: process.env.AWS_DB,
         Key: { [PK]: id },
-        ProjectionExpression: "players.#playerId.data.team",
-        ExpressionAttributeNames: {
-            "#playerid": playerid
+        ConditionExpression: "attribute_exists(#pk) AND attribute_exists(players.#playerId) AND players.#playerId.#metadata.#team = :teamId AND team_inc.#teamId > :zero AND #state = :waitingState AND host_player <> :playerId",
+        UpdateExpression: "SET team_inc.#teamId = team_inc.#teamId - :inc REMOVE players.#playerId",
+        ExpressionAttributeNames: { 
+            "#playerId": playerid,
+            "#teamId": teamid,
+            "#team": "team",
+            "#metadata": "data",
+            "#state": "state",
+            ...PK_EXPRESSION_NAME
         },
-        ConsistentRead: true
-    }));
-    const prevTeam = result.Item?.players?.[playerid]?.data?.team;
+        ExpressionAttributeValues: { 
+            ":inc": 1,
+            ":zero": 0,
+            ":playerId": playerid,
+            ":teamId": teamid,
+            ":waitingState": STATUS.WAITING
+        }
+    };
+    try {
+        return await docClient.send(new UpdateCommand(command));
+    } catch (error) {
+        if (error.name === ERROR_NAME) return false;
+        else throw error;
+    }
+}
+
+export async function changePlayerTeam (id, playerid, teamid) {
+    const prevTeam = await getPlayerTeam(id, playerid, false);
     if (prevTeam === undefined) {
         console.error(`Player ${playerid} does not exist in lobby ${id}.`);
         return false;
@@ -247,7 +273,7 @@ export async function changePlayerTeam (id, playerid, teamid) {
     const command = {
         TableName: process.env.AWS_DB,
         Key: { [PK]: id },
-        ConditionExpression: "attribute_exists(#pk) AND attribute_exists(players.#playerId) AND team_inc.#newTeamId < team_size AND team_inc.#oldTeamId > :zero AND #state = :waitingState",
+        ConditionExpression: "attribute_exists(#pk) AND attribute_exists(players.#playerId) AND players.#playerId.#metadata.#team = :oldTeamId AND team_inc.#newTeamId < team_size AND team_inc.#oldTeamId > :zero AND #state = :waitingState",
         UpdateExpression: "SET players.#playerId.#metadata.#team = :newTeamId, team_inc.#newTeamId = team_inc.#newTeamId + :inc, team_inc.#oldTeamId = team_inc.#oldTeamId - :inc",
         ExpressionAttributeNames: { 
             "#playerId": playerid,
@@ -415,6 +441,24 @@ export async function closeLobby (id) {
     } catch (error) {
         if (error.name === ERROR_NAME) return null;
         else throw error;
+    }
+}
+
+async function getPlayerTeam (id, playerid, consistentRead = false) {
+    try {
+        const result = await docClient.send(new GetCommand({
+            TableName: process.env.AWS_DB,
+            Key: { [PK]: id },
+            ProjectionExpression: "players.#playerId.data.team",
+            ExpressionAttributeNames: {
+                "#playerid": playerid
+            },
+            ConsistentRead: consistentRead
+        }));
+        return result.Item?.players?.[playerid]?.data?.team;
+    } catch (error) {
+        console.error(error);
+        return undefined;
     }
 }
 

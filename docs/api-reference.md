@@ -52,42 +52,6 @@ true if the lobby was started, and false otherwise.
 | :-- | :-- |
 | success | boolean |
 
-### `POST /lobby/team/join`
-Add a player to a waiting lobby.
-
-**Request Body Parameters (JSON):**
-| Key | Type | Detail |
-| :-- | :-- | :-- |
-| lobbyid | [Snowflake](#string-snowflake) ||
-| teamid | [Snowflake](#string-snowflake) ||
-| player | [PlayerProfile](#object-playerprofile) ||
-
-**Returns (JSON):**
-
-true if the lobby was joined, and false otherwise.
-| Key | Type |
-| :-- | :-- |
-| success | boolean |
-
-### `POST /lobby/team/change`
-Change a player's team.
-
-**Request Body Parameters (JSON):**
-| Key | Type | Detail |
-| :-- | :-- | :-- |
-| lobbyid | [Snowflake](#string-snowflake) ||
-| teamid | [Snowflake](#string-snowflake) | the new team to join |
-| userid | [Snowflake](#string-snowflake) ||
-
-**Returns (JSON):**
-
-true if the player's team was changed, and false otherwise.
-| Key | Type |
-| :-- | :-- |
-| success | boolean |
-
-> - If the player indicated by `userid` is not in the corrosponding lobby, this endpoint will return `403 Forbidden`
-
 ### `GET /lobby/info`
 Get details of an ongoing lobby.
 
@@ -141,6 +105,67 @@ Stages a round update, and generates an presigned link to upload the lobby's ter
 > - If `userid` does not corrospond to a play in the lobby, this endpoint will return `403 Forbidden`
 > - If a call to [`POST /lobby/round/update`](#post-lobbyroundupdate) is not made within `ttl`, any terrain data uploaded to `url` will be discarded
 > - If an update is made for a lobby that is still in the `Waiting` state, this endpoint will return `403 Forbidden`
+
+### `POST /lobby/leave`
+Remove a player from a lobby.
+
+**Request Body Parameters (JSON):**
+| Key | Type | Detail |
+| :-- | :-- | :-- |
+| lobbyid | [Snowflake](#string-snowflake) ||
+| userid | [Snowflake](#string-snowflake) ||
+
+**Returns (JSON):**
+
+true if the player's team was changed, and false otherwise.
+| Key | Type |
+| :-- | :-- |
+| success | boolean |
+
+> - If the lobby indicated by `lobbyid` is not in the `Waiting` state, this endpoint will return `403 Forbidden`
+> - This action will fail if the player indicated by `userid` is the lobby host
+> - This action will fail if the player indicated by `userid` does not already exist in the lobby
+
+### `POST /lobby/team/join`
+Add a player a lobby.
+
+**Request Body Parameters (JSON):**
+| Key | Type | Detail |
+| :-- | :-- | :-- |
+| lobbyid | [Snowflake](#string-snowflake) ||
+| teamid | [Snowflake](#string-snowflake) ||
+| player | [PlayerProfile](#object-playerprofile) ||
+
+**Returns (JSON):**
+
+true if the lobby was joined, and false otherwise.
+| Key | Type |
+| :-- | :-- |
+| success | boolean |
+
+> - If the lobby indicated by `lobbyid` is not in the `Waiting` state, this endpoint will return `403 Forbidden`
+> - This action will fail if the team indicated by `teamid` is full
+
+### `POST /lobby/team/change`
+Change a player's team.
+
+**Request Body Parameters (JSON):**
+| Key | Type | Detail |
+| :-- | :-- | :-- |
+| lobbyid | [Snowflake](#string-snowflake) ||
+| teamid | [Snowflake](#string-snowflake) | the new team to join |
+| userid | [Snowflake](#string-snowflake) ||
+
+**Returns (JSON):**
+
+true if the player's team was changed, and false otherwise.
+| Key | Type |
+| :-- | :-- |
+| success | boolean |
+
+> - If the lobby indicated by `lobbyid` is not in the `Waiting` state, this endpoint will return `403 Forbidden`
+> - This action will fail if the team indicated by `teamid` is full
+> - This action will fail if the player indicated by `userid` does not already exist in the lobby
 
 ### `POST /lobby/round/update`
 Commits a staged round update. Updated players corrospond to players that are already in the lobby. Updates to players that do not already in the lobby are discarded.

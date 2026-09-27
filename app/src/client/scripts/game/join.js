@@ -38,6 +38,31 @@ export default async function init (mainController, Discord, lobby, lobbyid, isH
             requestLock = false;
         }
     }, { once: false });
+    if (!isHost) {
+        phase.Events.addEventListener("LEAVE", async () => {
+            try {
+                if (requestLock) {
+                    mainController.Events.raiseEvent("NOTIFY", {severity: -1, message: "Sending requests too fast! Please wait...", timeout: RETRY_MIN_TIMEOUT_MS});
+                    return;
+                }
+                requestLock = true;
+                mainController.Events.raiseEvent("LOADING", {hide: false, message: "Leaving lobby"});
+                const success = await leaveLobby(lobbyid, Discord.user.id);
+                mainController.Events.raiseEvent("LOADING", {hide: true});
+                if (success) {
+                    mainController.Events.raiseEvent("NOTIFY", {severity: 1, message: "Left lobby.", timeout: -1});
+                } else {
+                    mainController.Events.raiseEvent("NOTIFY", {severity: -1, message: "Failed to leave lobby.", timeout: 1500});
+                    setTimeout(() => phase.setLeaveButtonVisibility(!phase.isClientHost), RETRY_MIN_TIMEOUT_MS);
+                }
+            } catch (err) {
+                console.error(err);
+                mainController.Events.raiseEvent("LOADING", {hide: false, message: "Fatal error", error: true});
+            } finally {
+                requestLock = false;
+            }
+        }, { once: false });
+    }
     ws.attach("JOINED", async (payload) => {
         console.debug("Recieved join event from peer: ", payload);
         const success = await phase.addNewPlayer(payload.player.userid, payload.player.avatar, payload.teamid);
@@ -90,6 +115,19 @@ async function startLobby (lobbyid, hostid) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({lobbyid, hostid}),
+    });
+    if (response.ok) {
+        const { success = false } = await response.json();
+        return success;
+    }
+    return false;
+}
+
+async function leaveLobby (lobbyid, userid) {
+    const response = await fetch(ENDPOINT + "/lobby/leave", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({lobbyid, userid}),
     });
     if (response.ok) {
         const { success = false } = await response.json();
