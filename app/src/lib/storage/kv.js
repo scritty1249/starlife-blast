@@ -286,6 +286,7 @@ export async function changePlayerTeam (id, playerid, teamid) {
         },
         ExpressionAttributeValues: { 
             ":newTeamId": teamid,
+            ":oldTeamId": prevTeam,
             ":inc": 1,
             ":zero": 0,
             ":waitingState": STATUS.WAITING
