@@ -15,13 +15,7 @@ export class Icon extends MenuItem {
         this.#bbox.apply(undefined, this.#img.size);
     }
 
-    draw (cursor, fixed = false) {
-        cursor.save();
-        cursor.fixed = fixed;
-        this.#img.draw(cursor, this.position.x, this.position.y);
-        cursor.restore();
-    }
-    getBoundingBox () {
+    #computeBoundingBox () {
         const hash = Vector.hash([this.position, this.#img.size, this.#img.scale, this.#img.origin]);
         if (hash !== this.#hash) {
             this.#hash = hash;
@@ -32,6 +26,20 @@ export class Icon extends MenuItem {
             max.x += size.x;
             this.#bbox.apply(min, max);
         }
+    }
+
+    async computeBounds (cursor) {
+        await super.computeBounds(cursor);
+        this.#computeBoundingBox();
+    }
+    draw (cursor, fixed = false) {
+        cursor.save();
+        cursor.fixed = fixed;
+        this.#img.draw(cursor, this.position.x, this.position.y);
+        cursor.restore();
+    }
+    getBoundingBox () {
+        this.#computeBoundingBox();
         return this.#bbox;
     }
     getPosition () { return this.position.sub(this.originOffset) }

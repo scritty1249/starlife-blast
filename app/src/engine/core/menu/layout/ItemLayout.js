@@ -71,6 +71,13 @@ export class ItemLayout extends MenuItem {
     }
 
     // menuitem methods
+    async computeBounds (cursor) {
+        await super.computeBounds(cursor);
+        const items = this.#items;
+        for (let i = 0; i < items.length; i++)
+            await items[i].computeBounds(cursor);
+        this.updateLayout();
+    }
     draw (cursor, fixed) {
         const items = this.#items;
         for (let i = 0; i < items.length; i++)

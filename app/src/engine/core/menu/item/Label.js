@@ -37,6 +37,10 @@ export class Label extends MenuItem {
         cursor.font = this.fontStyle;
     }
 
+    async computeBounds (cursor) {
+        await super.computeBounds(cursor);
+        this.computeSizing(cursor);
+    }
     computeSizing (cursor) {
         if (this.text) {
             cursor.save();

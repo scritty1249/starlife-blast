@@ -28,6 +28,10 @@ export class Button extends MenuItem {
         }
         this.#textSizing.hasUpdate = false;
     }
+    async computeBounds (cursor) {
+        await super.computeBounds(cursor);
+        this.computeTextSizing(cursor);
+    }
     draw (cursor, fixed) {
         this.drawButton(cursor, fixed);
         this.drawText(cursor, fixed);

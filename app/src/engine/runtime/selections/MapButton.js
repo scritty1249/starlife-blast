@@ -53,6 +53,10 @@ export class MapButton extends HexaButton {
         if (isDone) property.isLerping = false;
     }
 
+    async computeBounds (cursor) {
+        await super.computeBounds(cursor);
+        this.#maxWidthUpdate();
+    }
     drawThumbnail (cursor, fixed) {
         cursor.save();
         cursor.fixed = fixed;

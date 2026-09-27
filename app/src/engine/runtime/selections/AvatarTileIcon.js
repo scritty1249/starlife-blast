@@ -27,6 +27,10 @@ export class AvatarTileIcon extends Icon {
         }
     }
 
+    async computeBounds (cursor) {
+        await super.computeBounds(cursor);
+        this.#updateShapePosition();
+    }
     draw (cursor, fixed = false) {
         this.#updateShapePosition();
         cursor.save();

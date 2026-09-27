@@ -20,6 +20,11 @@ export class ScreenButton extends Button {
 
     #resizeHandler = () => { this.onResize() }
 
+    async computeBounds (cursor) {
+        await super.computeBounds(cursor);
+        if (this.#appCavnas.size.hash !== this.#bbox.size.hash)
+            this.onResize();
+    }
     onResize () {
         this.#bbox.max.apply(this.#appCavnas.size);
         ({width: this.#size.width, height: this.#size.height} = this.#bbox);

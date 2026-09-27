@@ -29,6 +29,7 @@ export class MenuItem extends Identifiable {
     hide = false; // tells InterfaceLayer to skip drawing this item, and will not return any callbacks
     constructor () { super() }
 
+    async computeBounds (cursor) {} // optional. Can be used to manually trigger any recalculations for sizing / positioning
     draw (cursor, fixed) {}
     isOver (point) { return false }
     getBoundingBox () { return new BoundingBox() }

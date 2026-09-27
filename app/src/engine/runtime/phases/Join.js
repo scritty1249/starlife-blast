@@ -208,7 +208,7 @@ export class Join extends Phase {
         bounding.left = bounding.right = !isPortrait;
         bounding.top = bounding.bottom = isPortrait;
     }
-    updateLayout () {
+    async computeLayout () {
         for (const [teamid, { avatars: icons, join: joinButton }] of this.store.teamElements) {
             const players = this.store.LobbyCache.Teams.get(teamid);
             const userids = Array.from(players.keys());
@@ -222,7 +222,7 @@ export class Join extends Phase {
                 }
             }
         }
-        this.store.lobbyElements.updateLayout();
+        await this.store.lobbyElements.computeBounds(this.Global.Display.cursor);
     }
     setJoinButtonVisibility (visible) {
         const hide = !visible;
@@ -246,7 +246,7 @@ export class Join extends Phase {
             if (this.#isPlayerInLobbyCache(userid))
                 this.#removePlayerFromTeam(userid);
             this.store.LobbyCache.Teams.get(team).set(userid, avatar);
-            this.updateLayout();
+            await this.computeLayout();
             return true;
         } else {
             return false;
