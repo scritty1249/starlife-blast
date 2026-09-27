@@ -26,6 +26,9 @@ export class Join extends Phase {
 
     #init () {
         this.Plane.max.apply(1000, 1000);
+        this.store.LobbyCache = {
+            Teams: new Map()
+        };
     }
     async #load () {
         await this.#loadLobby();
@@ -35,46 +38,42 @@ export class Join extends Phase {
         await this.Lobby.loadAvatarAssets(this.AssetPool, this.Global.constructor.AssetType.Image);
     }
     #setupInterface () {
-        const { isClientInLobby } = this;
         this.store.avatarTileClipShape = new Equigon(6, 64);
-        this.store.iconLayouts = [];
-        this.store.joinButtons = [];
-        this.store.teamAvatars = {};
+        this.store.teamElements = new Map();
         this.store.startButton = this.#createStartButton();
         const layout = new ItemLayout();
         layout.isColumn = true;
         this.store.teamLayouts = new ItemLayout();
         this.store.teamLayouts.gap = 20;
         for (const [ teamid, team ] of Object.entries(this.Lobby.Teams)) {
+            const teamPlayers = new Map();
             const teamLayout = new ItemLayout();
             const iconLayout = new ItemLayout();
             teamLayout.gap = 5;
             iconLayout.gap = 10;
             for (const player of team) {
-                const { avatar: key } = player.data.profile;
+                const { userid, avatar: key } = player.data.profile;
                 const avatar = this.#createPlayerIcon(key);
+                avatar.userid = userid;
                 iconLayout.push(avatar);
+                teamPlayers.set(userid, key);
             }
+            const joinButton = this.#createJoinButton(teamid);
+            joinButton.hide = team.length >= this.Lobby.teamsize || teamPlayers.has(this.ClientPlayerID);
             teamLayout.push(iconLayout);
-            if (team.length < this.Lobby.teamsize) {
-                const joinButton = this.#createJoinButton(teamid);
-                joinButton.hide = isClientInLobby;
-                teamLayout.push(joinButton);
-                this.store.joinButtons.push(joinButton);
-            }
-            this.store.teamAvatars[teamid] = iconLayout;
-            this.store.iconLayouts.push(iconLayout);
+            teamLayout.push(joinButton);
+            this.store.LobbyCache.Teams.set(teamid, teamPlayers);
             this.store.teamLayouts.push(teamLayout);
+            this.store.teamElements.set(teamid, {
+                avatars: iconLayout,
+                join: joinButton
+            });
         }
         layout.push(this.store.teamLayouts);
         layout.push(this.store.startButton);
         this.Interface.insert()
             .push(layout)
             .fixed = true;
-        if (isClientInLobby) {
-            this.setJoinButtonVisibility(false);
-            // [!] TODO: add leave button
-        }
         this.store.lobbyElements = layout;
     }
     #createPlayerIcon (avatarKey) {
@@ -116,12 +115,8 @@ export class Join extends Phase {
         button.hide = !this.isClientHost;
         return button;
     }
-    #onjoin (teamid) {
-        if (this.isClientInLobby) {
-            console.info("Cannot join lobby. Already a participant");
-        } else {
-            this.Events.raiseEvent("JOIN", { team: teamid });
-        }
+    async #onjoin (teamid) {
+        this.Events.raiseEvent("JOIN", { team: teamid });
     }
     #onstart () {
         if (this.isClientHost) {
@@ -134,7 +129,33 @@ export class Join extends Phase {
         const { cursor } = this.Global.Display;
         drawMenuItemRulers(cursor, this.store.lobbyElements, true, true);
     }
+    // only removes from cache
+    #removePlayerFromTeam (userid) {
+        for (const players of this.store.LobbyCache.Teams.values()) {
+            if (players.has(userid)) {
+                players.delete(userid);
+                return true;
+            }
+        }
+        return false;
+    }
 
+    getPlayerAvatar (userid) {
+        for (const players of this.store.LobbyCache.Teams.values()) {
+            if (players.has(userid))
+                return players.get(userid);
+        }
+        return undefined;
+    }
+    getPlayerTeam (userid) {
+        for (const [teamid, players] of this.store.LobbyCache.Teams) {
+            if (players.has(userid)) {
+                players.delete(userid);
+                return teamid;
+            }
+        }
+        return undefined;
+    }
     onanimate () {
         const { cursor } = this.Global.Display;
         this.Interface.draw(cursor);
@@ -142,31 +163,52 @@ export class Join extends Phase {
     }
     onResize () {
         const { isPortrait, center } = this.Global.Display;
-        const { lobbyElements, iconLayouts, teamLayouts } = this.store;
+        const { lobbyElements, teamElements, teamLayouts } = this.store;
         const { bounding } = this.Camera.Viewbox;
         teamLayouts.isColumn = isPortrait;
-        for (const iconLayout of iconLayouts) {
+        for (const iconLayout of teamElements.values().map(({avatars}) => avatars)) {
             iconLayout.isColumn = !isPortrait;
         }
         lobbyElements.setPosition(center.x - (lobbyElements.width / 2), center.y + (lobbyElements.height / 2));
         bounding.left = bounding.right = !isPortrait;
         bounding.top = bounding.bottom = isPortrait;
     }
+    updateLayout () {
+        for (const [teamid, { avatars: icons, join: joinButton }] of this.store.teamElements) {
+            const players = this.store.LobbyCache.Teams.get(teamid);
+            const userids = Array.from(players.keys());
+            joinButton.hide = players.size >= this.Lobby.teamsize || players.has(this.ClientPlayerID);
+            if (players.size !== icons.length || !icons.every(({userid}, i) => userids[i] && userids[i] === userid)) {
+                icons.clear();
+                for (const [userid, avatarKey] of players) {
+                    const avatar = this.#createPlayerIcon(avatarKey);
+                    avatar.userid = userid;
+                    icons.push(avatar);
+                }
+            }
+        }
+        this.store.lobbyElements.updateLayout();
+    }
     setJoinButtonVisibility (visible) {
         const hide = !visible;
-        for (const button of this.store.joinButtons)
-            button.hide = hide;
+        for (const [teamid, { avatars, join: button }] of this.store.teamElements)
+            if (hide) button.hide = true;
+            else button.hide = this.store.LobbyCache.Teams.get(teamid).has(this.ClientPlayerID)
+                || avatars.length >= this.Lobby.teamsize;
     }
     setStartButtonVisibility (visible) {
         this.store.startButton.hide = !visible;
     }
-    async addNewPlayer (avatar, team) {
-        if (team in this.store.teamAvatars) {
+    async addNewPlayer (userid, avatar, team) {
+        if (this.store.LobbyCache.Teams.has(team)) {
             if (!this.AssetPool.has(avatar)) {
                 this.AssetPool.add(avatar, [this.Global.constructor.AssetType.Image, undefined, avatar]);
                 await this.AssetPool.onready(avatar);
             }
-            this.store.teamAvatars[team].push(this.#createPlayerIcon(avatar));
+            if (this.getPlayerTeam(userid))
+                this.#removePlayerFromTeam(userid);
+            this.store.LobbyCache.Teams.get(team).set(userid, avatar);
+            this.updateInterfaceElements();
             return true;
         } else {
             return false;

@@ -46,4 +46,6 @@ export class AvatarTileIcon extends Icon {
     get shape () { return this.#shape }
     get width () { return this.getBoundingBox().width }
     get height () { return this.getBoundingBox().height }
+    get userid () { return this.userData.userid }
+    set userid (id) { return (this.userData.userid = id) }
 }

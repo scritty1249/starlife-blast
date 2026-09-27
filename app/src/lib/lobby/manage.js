@@ -128,6 +128,12 @@ export async function addPlayer (lobbyid, playerProfile, team) {
     return Boolean(result);
 }
 
+export async function changePlayerTeam (lobbyid, userid, team) {
+    if (!lobbyid || !team || !userid) return false;
+    const result = await KV.changePlayerTeam(lobbyid, userid, team);
+    return Boolean(result);
+}
+
 export async function createLobby (playerProfile, channelid, mapid, teamsize, teamcount) {
     const teamCount = teamcount > 1 ? teamcount : 2;
     const teamSize = teamsize || 1;

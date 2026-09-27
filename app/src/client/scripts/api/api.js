@@ -22,7 +22,7 @@ export async function getSignedLobbyData (lobbyid, userid) {
 
 export async function joinLobby (lobbyid, teamid, profile) {
     if (!lobbyid || !userid || !profile) return false;
-    const response = await fetch(ENDPOINT + `/lobby/add`, {
+    const response = await fetch(ENDPOINT + `/lobby/team/join`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

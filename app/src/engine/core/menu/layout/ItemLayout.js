@@ -113,6 +113,8 @@ export class ItemLayout extends MenuItem {
         this.updateLayout();
         return item;
     }
+    some (...args) { return this.#items.some(...args) }
+    every (...args) { return this.#items.every(...args) }
     push (...items) {
         const length = this.#items.push(...items);
         this.updateLayout();
@@ -127,6 +129,10 @@ export class ItemLayout extends MenuItem {
         const items = this.#items.splice(...args);
         this.updateLayout();
         return items;
+    }
+    clear () {
+        this.#items.splice(0, this.#items.length);
+        this.updateLayout();
     }
     filter (...args) { return this.#items.filter(...args) }
     map (...args) { return this.#items.map(...args) }

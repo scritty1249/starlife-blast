@@ -229,6 +229,50 @@ export async function addPlayer (id, teamid, playerInstance) {
     }
 }
 
+export async function changePlayerTeam (id, playerid, teamid) {
+    const result = await docClient.send(new GetCommand({
+        TableName: process.env.AWS_DB,
+        Key: { [PK]: id },
+        ProjectionExpression: "players.#playerId.data.team",
+        ExpressionAttributeNames: {
+            "#playerid": playerid
+        },
+        ConsistentRead: true
+    }));
+    const prevTeam = result.Item?.players?.[playerid]?.data?.team;
+    if (prevTeam === undefined) {
+        console.error(`Player ${playerid} does not exist in lobby ${id}.`);
+        return false;
+    }
+    const command = {
+        TableName: process.env.AWS_DB,
+        Key: { [PK]: id },
+        ConditionExpression: "attribute_exists(#pk) AND attribute_exists(players.#playerId) AND team_inc.#newTeamId < team_size AND team_inc.#oldTeamId > :zero AND #state = :waitingState",
+        UpdateExpression: "SET players.#playerId.#metadata.#team = :newTeamId, team_inc.#newTeamId = team_inc.#newTeamId + :inc, team_inc.#oldTeamId = team_inc.#oldTeamId - :inc",
+        ExpressionAttributeNames: { 
+            "#playerId": playerid,
+            "#oldTeamId": prevTeam,
+            "#newTeamId": teamid,
+            "#team": "team",
+            "#metadata": "data",
+            "#state": "state",
+            ...PK_EXPRESSION_NAME
+        },
+        ExpressionAttributeValues: { 
+            ":newTeamId": teamid,
+            ":inc": 1,
+            ":zero": 0,
+            ":waitingState": STATUS.WAITING
+        },
+    }
+    try {
+        return await docClient.send(new UpdateCommand(command));
+    } catch (error) {
+        if (error.name === ERROR_NAME) return false;
+        else throw error;
+    }
+}
+
 export async function isLobbyFull (id) {
     const command = {
         TableName: process.env.AWS_DB,

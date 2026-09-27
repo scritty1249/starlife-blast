@@ -52,14 +52,14 @@ true if the lobby was started, and false otherwise.
 | :-- | :-- |
 | success | boolean |
 
-### `POST /lobby/add`
+### `POST /lobby/team/join`
 Add a player to a waiting lobby.
 
 **Request Body Parameters (JSON):**
 | Key | Type | Detail |
 | :-- | :-- | :-- |
-| lobbyid | [Snowflake](#string-snowflake) |
-| teamid | [Snowflake](#string-snowflake) |
+| lobbyid | [Snowflake](#string-snowflake) ||
+| teamid | [Snowflake](#string-snowflake) ||
 | player | [PlayerProfile](#object-playerprofile) ||
 
 **Returns (JSON):**
@@ -68,6 +68,25 @@ true if the lobby was joined, and false otherwise.
 | Key | Type |
 | :-- | :-- |
 | success | boolean |
+
+### `POST /lobby/team/change`
+Change a player's team.
+
+**Request Body Parameters (JSON):**
+| Key | Type | Detail |
+| :-- | :-- | :-- |
+| lobbyid | [Snowflake](#string-snowflake) ||
+| teamid | [Snowflake](#string-snowflake) | the new team to join |
+| userid | [Snowflake](#string-snowflake) ||
+
+**Returns (JSON):**
+
+true if the player's team was changed, and false otherwise.
+| Key | Type |
+| :-- | :-- |
+| success | boolean |
+
+> - If the player indicated by `userid` is not in the corrosponding lobby, this endpoint will return `403 Forbidden`
 
 ### `GET /lobby/info`
 Get details of an ongoing lobby.
