@@ -141,7 +141,7 @@ export class Join extends Phase {
     async #onleave () {
         if (this.isClientHost) {
             console.warn("Cannot leave lobby. Client user is lobby host");
-        } else if (!this.isPlayerInLobby(userid)) {
+        } else if (!this.isClientInLobby) {
             console.warn("Cannot leave lobby. Client user is not in lobby");
         } else {
             this.Events.raiseEvent("LEAVE");
@@ -172,8 +172,10 @@ export class Join extends Phase {
         return this.store.LobbyCache.Teams.values().some((t) => t.has(userid));
     }
 
-    isPlayerInLobby (userid, includeCache = true) {
-        return this.Lobby.Players.has(userid) || (includeCache && this.#isPlayerInLobbyCache(userid));
+    isPlayerInLobby (userid, cache = true) {
+        return cache
+            ? this.#isPlayerInLobbyCache(userid)
+            : this.Lobby.Players.has(userid);
     }
     getPlayerAvatar (userid) {
         for (const players of this.store.LobbyCache.Teams.values()) {
