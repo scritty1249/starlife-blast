@@ -50,6 +50,8 @@ export default async function init (mainController, Discord, lobby, lobbyid, isH
                 const success = await leaveLobby(lobbyid, Discord.user.id);
                 mainController.Events.raiseEvent("LOADING", {hide: true});
                 if (success) {
+                    ws.send("LEFT", {userid: userprofile.userid});
+                    await phase.removePlayer(userprofile.userid);
                     mainController.Events.raiseEvent("NOTIFY", {severity: 1, message: "Left lobby.", timeout: -1});
                 } else {
                     mainController.Events.raiseEvent("NOTIFY", {severity: -1, message: "Failed to leave lobby.", timeout: 1500});
@@ -66,6 +68,10 @@ export default async function init (mainController, Discord, lobby, lobbyid, isH
     ws.attach("JOINED", async (payload) => {
         console.debug("Recieved join event from peer: ", payload);
         const success = await phase.addNewPlayer(payload.player.userid, payload.player.avatar, payload.teamid);
+    });
+    ws.attach("LEFT", async (payload) => {
+        console.debug("Recieved leave event from peer: ", payload);
+        const success = await phase.removePlayer(payload.userid);
     });
     ws.attach("STARTED", async () => {
         console.debug("Recieved start event from peer");

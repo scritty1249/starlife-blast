@@ -256,6 +256,11 @@ export class Join extends Phase {
             return false;
         }
     }
+    async removePlayer (userid) {
+        if (this.#isPlayerInLobbyCache(userid))
+            this.#removePlayerFromTeam(userid);
+        await this.computeLayout();
+    }
 
     get Lobby () { return this.#Lobby }
     get ClientPlayerID () { return this.#ClientPlayerID }
