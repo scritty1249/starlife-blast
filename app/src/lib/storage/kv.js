@@ -451,9 +451,9 @@ async function getPlayerTeam (id, playerid, consistentRead = false) {
             Key: { [PK]: id },
             ProjectionExpression: "players.#playerId.data.team",
             ExpressionAttributeNames: {
-                "#playerid": playerid
+                "#playerId": playerid
             },
-            ConsistentRead: consistentRead
+            ConsistentRead: !!consistentRead
         }));
         return result.Item?.players?.[playerid]?.data?.team;
     } catch (error) {
