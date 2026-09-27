@@ -41,9 +41,11 @@ if (existsSync(libPath)) {
         libFiles.map(async (filePath) => {
             const relative = path.relative(libPath, filePath);
             const dest = path.join(outDir, relative);
-            buildArgs.entryPoints = [filePath];
-            buildArgs.outfile = dest;
-            await build(buildArgs);
+            await build({
+                entryPoints: [filePath],
+                outfile: dest,
+                ...buildArgs
+            });
             console.log(`Bundled: ${filePath} > ${dest}`);
         }),
     );
