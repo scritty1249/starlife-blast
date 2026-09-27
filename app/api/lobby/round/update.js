@@ -1,8 +1,6 @@
 import { verifyToken, commitUpdate } from "@server/lib/lobby/manage.js";
 import * as Responses from "@server/lib/responses.js";
 
-const DEV_PROD = process.env.NODE_ENV === "development";
-
 export async function POST (request) {
     try {
         const { token, lobbyid, players = {} } = await request.json();

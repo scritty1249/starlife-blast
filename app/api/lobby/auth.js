@@ -2,8 +2,6 @@ import { lobbyHasPlayer, lobbyIsWaiting, getTerrainUrl, stageUpdate } from "@ser
 import { CONNECTION_URL, CONNECTION_KEY, generateChannelID } from "@server/lib/supabase/client.js";
 import * as Responses from "@server/lib/responses.js";
 
-const DEV_PROD = process.env.NODE_ENV === "development";
-
 export async function GET (request) {
     try {
         const { searchParams } = new URL(request.url);

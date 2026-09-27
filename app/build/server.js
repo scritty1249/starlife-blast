@@ -28,20 +28,22 @@ if (existsSync(libPath)) {
         process.exit(0);
     }
     console.log(`Building ${libFiles.length} files...\n`);
+    const buildArgs = {
+        bundle: true,
+        minify: !DEV_FLAG, // shake off unused bits of imported game engine
+        format: "esm",
+        platform: "node", // target env
+        packages: "external", // don't bundle in node/npm stuff
+        plugins: [resolveAbsolutePathsPluginFactory()],
+        define: { "process.env.DEV_FLAG": `${DEV_FLAG}` }
+    };
     await Promise.all(
-        libFiles.map(async filePath => {
+        libFiles.map(async (filePath) => {
             const relative = path.relative(libPath, filePath);
             const dest = path.join(outDir, relative);
-            await build({
-                entryPoints: [filePath],
-                bundle: true,
-                minify: !DEV_FLAG, // shake off unused bits of imported game engine
-                format: "esm",
-                platform: "node", // target env
-                packages: "external", // don't bundle in node/npm stuff
-                outfile: dest,
-                plugins: [resolveAbsolutePathsPluginFactory()],
-            });
+            buildArgs.entryPoints = [filePath];
+            buildArgs.outfile = dest;
+            await build(buildArgs);
             console.log(`Bundled: ${filePath} > ${dest}`);
         }),
     );

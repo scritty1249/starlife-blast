@@ -1,8 +1,11 @@
 import { printError } from "./main.js";
 
+const DEV_FLAG = process.env.NODE_ENV === "development" || process.env.DEV_FLAG;
+
 export function error (err) {
     printError(err);
-    return Response.json({error: err?.message}, {status: 500, statusText: "Internal server error"});
+    const message = DEV_FLAG ? err?.message : "Internal server error";
+    return Response.json({error: message}, {status: 500, statusText: "Internal server error"});
 }
 
 export function invalid () {

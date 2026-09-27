@@ -1,8 +1,6 @@
 import { lobbyIsWaiting, addPlayer, startFullLobby } from "@server/lib/lobby/manage.js";
 import * as Responses from "@server/lib/responses.js";
 
-const DEV_PROD = process.env.NODE_ENV === "development";
-
 export async function POST (request) {
     try {
         const { player, lobbyid, teamid } = await request.json();
