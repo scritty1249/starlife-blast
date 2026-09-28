@@ -1,7 +1,7 @@
-import { Icon } from "../../core/Core.js";
-
+import { Icon, Vector } from "../../core/Core.js";
 export class AvatarTileIcon extends Icon {
     #shape;
+    #positionOffset = new Vector();
     #imageHash;
     #shapeHash;
     constructor (image, shape) {
@@ -10,10 +10,6 @@ export class AvatarTileIcon extends Icon {
         this.#updateShape();
     }
 
-    #updatePositionOffset () {
-        const { min, height } = this.shape.getBoundingBox();
-        this.position.apply(min.x, min.y + height);
-    }
     #updateShape () {
         const { shape } = this;
         const { transform } = shape;
@@ -22,14 +18,20 @@ export class AvatarTileIcon extends Icon {
         if (!shapeCenter.eq(imageCenter) || shapeHash !== this.#shapeHash || imageHash !== this.#imageHash) {
             this.#shapeHash = shapeHash;
             this.#imageHash = imageHash;
-            const offset = imageCenter.sub(shapeCenter, true);
+            const offsetCenter = imageCenter.sub(shapeCenter, true);
+            // move shape
             transform.save();
             transform.reset();
-            transform.offset.apply(offset);
+            transform.offset.apply(offsetCenter);
             shape.applyTransform();
             transform.restore();
+            // save new position offset
+            const { min, height } = shape.getBoundingBox();
+            this.#positionOffset.apply(
+                this.position.x - min.x,
+                this.position.y - (min.y + height)
+            );
         }
-        this.#updatePositionOffset();
     }
 
     async computeBounds (cursor) {
@@ -46,6 +48,7 @@ export class AvatarTileIcon extends Icon {
         cursor.restore();
     }
     getBoundingBox () { return this.shape.getBoundingBox() }
+    getPosition () { return super.getPosition().add(this.#positionOffset, true) }
     setPosition (x, y = null) {
         super.setPosition(x, y);
         this.#updateShape();
