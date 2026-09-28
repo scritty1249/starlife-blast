@@ -219,8 +219,8 @@ export class Join extends Phase {
         const { lobbyElements, teamElements, teamLayouts } = this.store;
         const { bounding } = this.Camera.Viewbox;
         const notPortrait = !isPortrait;
-        const teamWidth = isPortrait ? Math.max(...teamLayouts.children.map(({width}) => width)) : 0;
-        const teamHeight = isPortrait ? 0 : Math.max(...teamLayouts.children.map(({height}) => height));
+        const teamWidth = isPortrait ? Math.max(...teamLayouts.children.map(({contentWidth}) => contentWidth)) : 0;
+        const teamHeight = isPortrait ? 0 : Math.max(...teamLayouts.children.map(({contentHeight}) => contentHeight));
         teamLayouts.isColumn = isPortrait;
         for (const teamLayout of teamLayouts.children) {
             teamLayout.minWidth = teamWidth;

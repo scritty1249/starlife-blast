@@ -267,6 +267,8 @@ export class ItemLayout extends MenuItem {
     get padding () { return this.#padding }
     get width () { return this.#size.box.x }
     get height () { return this.#size.box.y }
+    get contentWidth () { return this.#size.content.x }
+    get contentHeight () { return this.#size.content.y }
     get size () { return this.#size.box.clone() }
     get axis () { return this.#axis }
     get isColumn () { return this.#isColumn }
