@@ -48,7 +48,7 @@ export class AvatarTileIcon extends Icon {
         cursor.restore();
     }
     getBoundingBox () { return this.shape.getBoundingBox() }
-    getPosition () { return super.getPosition().add(this.#positionOffset, true) }
+    getPosition () { return super.getPosition().sub(this.#positionOffset, true) }
     setPosition (x, y = null) {
         super.setPosition(x, y);
         this.#updateShape();
