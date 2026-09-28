@@ -291,11 +291,13 @@ export class ItemLayout extends MenuItem {
         if (prev !== this.#ignoreHidden) this.updateLayout();
         return this.#ignoreHidden;
     }
+    get minWidth () { return super.minWidth }
     set minWidth (num) {
         super.minWidth = num;
         if (this.minWidth > this.width) this.#reflowLayout();
         return num;
     }
+    get minHeight () { return super.minHeight }
     set minHeight (num) {
         super.minWidth = num;
         if (this.minHeight > this.height) this.#reflowLayout();
