@@ -82,6 +82,7 @@ export class Join extends Phase {
             .push(layout)
             .fixed = true;
         this.store.lobbyElements = layout;
+        this.#computeLayoutBounds();
     }
     #createPlayerIcon (avatarKey) {
         const image = this.AssetPool.get(avatarKey).clone(false);
@@ -176,7 +177,25 @@ export class Join extends Phase {
     }
     async #computeLayoutBounds () {
         await this.store.lobbyElements.computeBounds(this.Global.Display.cursor);
-        this.onResize();
+    }
+    #computeLayoutFlow () {
+        const { isPortrait, center } = this.Global.Display;
+        const { lobbyElements, teamElements, teamLayouts } = this.store;
+        const { bounding } = this.Camera.Viewbox;
+        const notPortrait = !isPortrait;
+        const teamWidth = isPortrait ? Math.max(...teamLayouts.children.map(({contentWidth}) => contentWidth)) : 0;
+        const teamHeight = isPortrait ? 0 : Math.max(...teamLayouts.children.map(({contentHeight}) => contentHeight));
+        teamLayouts.isColumn = isPortrait;
+        for (const teamLayout of teamLayouts.children) {
+            teamLayout.minWidth = teamWidth;
+            teamLayout.minHeight = teamHeight;
+            teamLayout.isColumn = notPortrait;
+        }
+        for (const iconLayout of teamElements.values().map(({avatars}) => avatars))
+            iconLayout.isColumn = notPortrait;
+        lobbyElements.setPosition(center.x - (lobbyElements.width / 2), center.y + (lobbyElements.height / 2));
+        bounding.left = bounding.right = notPortrait;
+        bounding.top = bounding.bottom = isPortrait;
     }
 
     // checks and sets
@@ -215,23 +234,8 @@ export class Join extends Phase {
         if (this.Global.flags.DEBUG) this.#drawDebugOverlay();
     }
     onResize () {
-        const { isPortrait, center } = this.Global.Display;
-        const { lobbyElements, teamElements, teamLayouts } = this.store;
-        const { bounding } = this.Camera.Viewbox;
-        const notPortrait = !isPortrait;
-        const teamWidth = isPortrait ? Math.max(...teamLayouts.children.map(({contentWidth}) => contentWidth)) : 0;
-        const teamHeight = isPortrait ? 0 : Math.max(...teamLayouts.children.map(({contentHeight}) => contentHeight));
-        teamLayouts.isColumn = isPortrait;
-        for (const teamLayout of teamLayouts.children) {
-            teamLayout.minWidth = teamWidth;
-            teamLayout.minHeight = teamHeight;
-            teamLayout.isColumn = notPortrait;
-        }
-        for (const iconLayout of teamElements.values().map(({avatars}) => avatars))
-            iconLayout.isColumn = notPortrait;
-        lobbyElements.setPosition(center.x - (lobbyElements.width / 2), center.y + (lobbyElements.height / 2));
-        bounding.left = bounding.right = notPortrait;
-        bounding.top = bounding.bottom = isPortrait;
+        this.#computeLayoutFlow();
+        this.#computeLayoutBounds();
     }
     async computeLayout () {
         for (const [teamid, { avatars: icons, join: joinButton }] of this.store.teamElements) {
@@ -247,7 +251,7 @@ export class Join extends Phase {
                 }
             }
         }
-        await this.#computeLayoutBounds();
+        this.onResize();
     }
     setJoinButtonVisibility (visible, triggerReflow = true) {
         const hide = !visible;
@@ -255,15 +259,15 @@ export class Join extends Phase {
             if (hide) button.hide = true;
             else button.hide = this.store.LobbyCache.Teams.get(teamid).has(this.ClientPlayerID)
                 || avatars.length >= this.Lobby.teamsize;
-        if (triggerReflow) this.#computeLayoutBounds();
+        if (triggerReflow) this.onResize();
     }
     setStartButtonVisibility (visible, triggerReflow = true) {
         this.store.startButton.hide = !visible;
-        if (triggerReflow) this.#computeLayoutBounds();
+        if (triggerReflow) this.onResize();
     }
     setLeaveButtonVisibility (visible, triggerReflow = true) {
         this.store.leaveButton.hide = !visible;
-        if (triggerReflow) this.#computeLayoutBounds();
+        if (triggerReflow) this.onResize();
     }
     async addNewPlayer (userid, avatar, team) {
         if (this.store.LobbyCache.Teams.has(team)) {
