@@ -91,7 +91,7 @@ export class Join extends Phase {
     }
     #createJoinButton (teamid) {
         const { DEFAULT_FONT, FONT_SIZE } = this.Global.store;
-        const button = new HexaButton(64);
+        const button = new HexaButton(32);
         const { width, height } = button.getBoundingBox();
         button.fontSize = FONT_SIZE;
         button.fontFamily = DEFAULT_FONT.family;
