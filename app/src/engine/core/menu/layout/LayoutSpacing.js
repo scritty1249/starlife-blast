@@ -18,7 +18,7 @@ export class LayoutSpacing {
 
     // accepts args
     // 1: top | left | bottom | right
-    // 2: top | left, bottom | right
+    // 2: top | bottom, left | right
     // 4: top, left, bottom, right
     apply (top, left, bottom, right) {
         if (top === undefined) {
@@ -30,8 +30,8 @@ export class LayoutSpacing {
                 = this.#right
                 = top;
         } else if (bottom === undefined) {
-            this.#top = this.#left = top;
-            this.#bottom = this.#right = left;
+            this.#top = this.#bottom = top;
+            this.#left = this.#right = left;
         } else {
             this.#top = top;
             this.#left = left;
@@ -43,6 +43,18 @@ export class LayoutSpacing {
     }
 
     get isLayoutSpacing () { return true }
+    get horizontal () { return this.right + this.left }
+    set horizontal (num) {
+        this.#left = this.#right = num;
+        this.#update();
+        return num;
+    }
+    get vertical () { return this.top + this.bottom }
+    set vertical (num) {
+        this.#top = this.#bottom = num;
+        this.#update();
+        return num;
+    }
     get top () { return this.#top }
     get left () { return this.#left }
     get bottom () { return this.#bottom }

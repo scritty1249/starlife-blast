@@ -2,7 +2,8 @@ import {
     Phase,
     ItemLayout,
     Equigon,
-    HexaButton
+    HexaButton,
+    ALIGNMENT
 } from "../../core/Core.js";
 import { AvatarTileIcon } from "../selections/AvatarTileIcon.js";
 import { initLobby } from "../utils.js";
@@ -45,6 +46,7 @@ export class Join extends Phase {
         const layout = new ItemLayout();
         layout.isColumn = true;
         this.store.teamLayouts = new ItemLayout();
+        this.store.teamLayouts.align = ALIGNMENT.START;
         this.store.teamLayouts.gap = 20;
         for (const [ teamid, team ] of Object.entries(this.Lobby.Teams)) {
             const teamPlayers = new Map();

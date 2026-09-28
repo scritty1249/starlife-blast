@@ -75,7 +75,6 @@ export class Create extends Phase {
             const button = this.#createMapOption(map);
             mapButtons.push(button);
         }
-        
         this.store.buttons.push(mapButtons);
     }
     #createMapOption (map) {
