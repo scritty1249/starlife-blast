@@ -23,6 +23,7 @@ function getAlignment (value) {
 
 export class LayoutAxis {
     #align = ALIGNMENT.CENTER;
+    onupdate;
     constructor (align) {
         if (align) {
             const alignment = getAlignment(align);
@@ -32,7 +33,7 @@ export class LayoutAxis {
     }
 
     eq (other) { return other?.isAxisAlignment && other.align === this.align }
-    clone () { return new AxisAlignment(this.#align) }
+    clone () { return new LayoutAxis(this.#align) }
     toString () { return _ALIGNMENT_KEY_MAP.get(this.#align) }
     toJSON () { return this.#align }
 
@@ -41,6 +42,9 @@ export class LayoutAxis {
     set align (value) {
         const alignment = getAlignment(value);
         if (!alignment) throw new Error(`[${typeString(this)}]: Invalid alignment ${value}`);
-        return (this.#align = alignment);
+        const prev = this.#align;
+        this.#align = value;
+        if (prev !== value) this.onupdate?.();
+        return value;
     }
 }

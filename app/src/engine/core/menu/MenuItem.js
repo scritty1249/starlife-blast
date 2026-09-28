@@ -25,6 +25,7 @@ export class MenuItem extends Identifiable {
     };
     #userData = {};
     #originOffset = new Vector(0, 0);
+    #minSize = new Vector(0, 0); // ONLY used for ItemLayout calculations. This value should not substitute size in any other aspect
     keepDragFocus = false; // when set, drag events will continue even after pointer leaves this button's area
     hide = false; // tells InterfaceLayer to skip drawing this item, and will not return any callbacks
     constructor () { super() }
@@ -43,6 +44,11 @@ export class MenuItem extends Identifiable {
     get height () { return 0 }
     get size () { return this.getBoundingBox().size }
     get userData () { return this.#userData }
+    get minWidth () { return this.#minSize.x }
+    set minWidth (num) { return (this.#minSize.x = num) }
+    get minHeight () { return this.#minSize.y }
+    set minHeight (num) { return (this.#minSize.y = num) }
+    get minSize () { return this.#minSize }
     get onclick () { return this.hide ? null : this.#callback.onclick }
     set onclick (callbackFn) { return (this.#callback.onclick = callbackFn) }
     get onhold () { return this.hide ? null : this.#callback.onhold }

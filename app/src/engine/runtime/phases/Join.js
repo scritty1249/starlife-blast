@@ -48,7 +48,7 @@ export class Join extends Phase {
         layout.isColumn = true;
         layout.ignoreHidden = true;
         this.store.teamLayouts = new ItemLayout();
-        this.store.teamLayouts.align = ALIGNMENT.START;
+        this.store.teamLayouts.axis.cross.align = ALIGNMENT.START;
         this.store.teamLayouts.gap = 20;
         for (const [ teamid, team ] of Object.entries(this.Lobby.Teams)) {
             const teamPlayers = new Map();

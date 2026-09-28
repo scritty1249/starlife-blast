@@ -4,32 +4,124 @@ import { MenuItem } from "../MenuItem.js";
 import { LayoutSpacing } from "./LayoutSpacing.js";
 import { LayoutAxis, ALIGNMENT } from "./LayoutAxis.js";
 
+function getContentWidth (menuItem) { return Math.max(menuItem.width, menuItem.minWidth) }
+function getContentHeight (menuItem) { return Math.max(menuItem.height, menuItem.minHeight) }
+
+// falsey conditions return values for main axis, when isColumn = false
+class LayoutAlignment {
+    static #getSize (flip, vec) {
+        return flip ? vec.y : vec.x;
+    }
+    static #getSign (flip) {
+        return flip ? 1 : -1;
+    }
+    #x = new LayoutAxis();
+    #y = new LayoutAxis();
+    #isColumn = false;
+    #main;
+    #cross;
+    #onswap;
+    constructor (isColumn, onswap) {
+        this.#isColumn = !!isColumn;
+        this.#main = this.#x;
+        this.#cross = this.#y;
+        this.#onswap = onswap;
+    }
+
+    #swapAxes () {
+        const mainCallback = this.main.onupdate;
+        const crossCallback = this.cross.onupdate;
+        const axis = this.main;
+        this.#main = this.cross;
+        this.main.onupdate = mainCallback;
+        this.#cross = axis;
+        this.cross.onupdate = crossCallback;
+        this.#onswap?.();
+    }
+
+    getMainAxis (vec) {
+        return LayoutAlignment.#getSize(this.isColumn, vec);
+    }
+    getCrossAxis (vec) {
+        return LayoutAlignment.#getSize(!this.isColumn, vec);
+    }
+
+    get isLayoutAlignment () { return true }
+    get main () { return this.#main }
+    get cross () { return this.#cross }
+    get mainSign () { return LayoutAlignment.#getSign(this.isColumn); }
+    get crossSign () { return LayoutAlignment.#getSign(!this.isColumn); }
+    get isColumn () { return this.#isColumn }
+    set isColumn (bool) {
+        const prev = this.#isColumn;
+        this.#isColumn = !!bool;
+        if (prev !== this.#isColumn) this.#swapAxes();
+        return this.#isColumn;
+    }
+}
+
 export class ItemLayout extends MenuItem {
     #bbox = new BoundingBox();
     #items = new Array();
     #padding = new LayoutSpacing();
-    #crossAxis = new LayoutAxis();
     #position = new Vector();
-    #size = new Vector(); // [!] do not return as reference
+    #size = {
+        content: new Vector(),
+        box: new Vector()
+    };
+    #contentFlow = {
+        mainOffset: 0,
+        alignMethod: () => 0
+    };
     #gap = 0;
     #isColumn = false;
     #ignoreHidden = false; // make space for hidden items
+    #axis;
     constructor () {
         super();
+        this.#axis = new LayoutAlignment(this.isColumn, () => this.isColumn = !!this.isColumn);
         this.padding.onupdate = () => this.updateLayout();
+        this.axis.main.onupdate = () => {
+            this.#updateMainAlignment();
+            this.#updateItemPositions();
+        }
+        this.axis.cross.onupdate = () => {
+            this.#updateCrossAlignment();
+            this.#updateItemPositions();
+        }
     }
 
+    // [!] trying to shave down code redundancy at the cost of bloating performance
+    //      rewrite this first if engine performance suffers - KT
+    #updateItemPositions () {
+        if (!this.#items.length) return;
+        const { gap } = this;
+        const getAlignment = this.#contentFlow.alignMethod;
+        let mainAxis = this.#mainOrigin - this.#contentFlow.mainOffset;
+        const applyPosition = this.isColumn
+            ? (item) => {
+                item.setPosition(getAlignment(item), mainAxis);
+                mainAxis -= getContentHeight(item) + gap;
+            } : (item) => {
+                item.setPosition(mainAxis, getAlignment(item));
+                mainAxis += getContentWidth(item) + gap;
+            };
+        for (let i = 0; i < this.#items.length; i++) {
+            if (this.ignoreHidden && this.#items[i]?.hide) continue;
+            applyPosition(this.#items[i]);
+        }
+    }
     #updateSize () {
         let x = 0;
         let y = 0;
         if (this.#items.length) {
             let itemCount = 0;
             const collectX = this.isColumn
-                ? (item) => { const { width } = item; if (width > x) x = width; if (width > 0) itemCount++; }
-                : (item) => { x += item.width }
+                ? (item) => { const width = getContentWidth(item); if (width > x) x = width; if (width > 0) itemCount++; }
+                : (item) => x += getContentWidth(item)
             const collectY = this.isColumn
-                ? (item) => { y += item.height }
-                : (item) => { const { height } = item; if (height > y) y = height; if (height > 0) itemCount++; }
+                ? (item) => y += getContentHeight(item)
+                : (item) => { const height = getContentHeight(item); if (height > y) y = height; if (height > 0) itemCount++; }
             for (let i = 0; i < this.#items.length; i++) {
                 const item = this.#items[i];
                 if (this.ignoreHidden && item?.hide) continue;
@@ -43,64 +135,47 @@ export class ItemLayout extends MenuItem {
             if (this.isColumn) y += gaps;
             else x += gaps;
         }
-        this.#size.apply(x, y);
+        this.#size.content.apply(x, y);
+        this.#size.box.apply(Math.max(x, this.minWidth), Math.max(y, this.minHeight));
+    }
+    #updateMainAlignment () {
+        const excess = this.axis.getMainAxis(this.#size.box) - this.axis.getMainAxis(this.#size.content);
+        if (this.axis.main.align === ALIGNMENT.CENTER) {
+            this.#contentFlow.mainOffset = excess / 2;
+        } else if (this.axis.main.align === ALIGNMENT.END) {
+            this.#contentFlow.mainOffset = excess;
+        } else { // align start
+            this.#contentFlow.mainOffset = 0;
+        }
     }
     // [!] trying to shave down code redundancy at the cost of bloating performance
     //      rewrite this first if engine performance suffers - KT
-    #getCrossAlignMethod () {
-        const origin = this.isColumn
-            ? this.#originX
-            : this.#originY;
-        const max = this.isColumn
-            ? this.#size.x
-            : this.#size.y;
-        const sign = this.isColumn
-            ? -1
-            : 1;
+    #updateCrossAlignment () {
+        const origin = this.#crossOrigin;
+        const max = this.axis.getCrossAxis(this.#size.box);
+        const sign = this.axis.crossSign;
         const getLength = this.isColumn
-            ? (item) => item.width * sign
-            : (item) => item.height * sign;
-        if (this.align === ALIGNMENT.CENTER) {
+            ? (item) => getContentWidth(item) * sign
+            : (item) => getContentHeight(item) * sign;
+        if (this.axis.cross.align === ALIGNMENT.START) {
+            this.#contentFlow.alignMethod = (item) => origin;
+        } else if (this.axis.cross.align === ALIGNMENT.END) {
+            const offset = this.isColumn
+                ? (origin + max) - this.padding.horizontal
+                : (origin - max) + this.padding.vertical;
+            this.#contentFlow.alignMethod = (item) => offset + getLength(item);
+        } else { // align center
             const pad = this.isColumn
                 ? this.padding.horizontal
                 : this.padding.vertical;
             const offset = origin - (sign * (max - pad) / 2);
-            return (item) => offset + (getLength(item) / 2);
-        } else if (this.align === ALIGNMENT.START) {
-            return (item) => origin;
-        } else if (this.align === ALIGNMENT.END) {
-            const offset = this.isColumn
-                ? (origin + max) - this.padding.horizontal
-                : (origin - max) + this.padding.vertical;
-            return (item) => offset + getLength(item);
-        }
-    }
-    // [!] trying to shave down code redundancy at the cost of bloating performance
-    //      rewrite this first if engine performance suffers - KT
-    #updateItemPositions () {
-        if (!this.#items.length) return;
-        const { gap } = this;
-        const getAlignment = this.#getCrossAlignMethod();
-        let mainAxis = this.isColumn
-            ? this.#originY
-            : this.#originX;
-        const applyPosition = this.isColumn
-            ? (item) => {
-                item.setPosition(getAlignment(item), mainAxis);
-                mainAxis -= item.height + gap;
-            } : (item) => {
-                item.setPosition(mainAxis, getAlignment(item));
-                mainAxis += item.width + gap;
-            };
-        for (let i = 0; i < this.#items.length; i++) {
-            if (this.ignoreHidden && this.#items[i]?.hide) continue;
-            applyPosition(this.#items[i]);
+            this.#contentFlow.alignMethod = (item) => offset + (getLength(item) / 2);
         }
     }
     #updateBoundingBox () {
         const { min, max } = this.#bbox;
-        min.apply(this.#position.x, this.#position.y - this.#size.y);
-        max.apply(this.#position.x + this.#size.x, this.#position.y);
+        min.apply(this.#position.x, this.#position.y - this.#size.box.y);
+        max.apply(this.#position.x + this.#size.box.x, this.#position.y);
     }
 
     // menuitem methods
@@ -124,6 +199,8 @@ export class ItemLayout extends MenuItem {
         }
         this.#updateSize();
         this.#updateBoundingBox();
+        this.#updateMainAlignment();
+        this.#updateCrossAlignment();
         this.#updateItemPositions();
     }
     setPosition (x, y = null) {
@@ -180,23 +257,20 @@ export class ItemLayout extends MenuItem {
     get isItemLayout () { return true }
     get #originX () { return this.#position.x + this.padding.left }
     get #originY () { return this.#position.y - this.padding.top }
+    get #mainOrigin () { return this.isColumn ? this.#originY : this.#originX }
+    get #crossOrigin () { return this.isColumn ? this.#originX : this.#originY }
     get children () { return this.#items.values() }
     get length () { return this.#items.length }
     get padding () { return this.#padding }
-    get width () { return this.#size.x }
-    get height () { return this.#size.y }
-    get size () { return this.#size.clone() }
-    get align () { return this.#crossAxis.align }
-    set align (value) {
-        const prev = this.align;
-        this.#crossAxis.align = value;
-        if (prev !== value) this.updateLayout();
-        return value;
-    }
+    get width () { return this.#size.box.x }
+    get height () { return this.#size.box.y }
+    get size () { return this.#size.box.clone() }
+    get axis () { return this.#axis }
     get isColumn () { return this.#isColumn }
     set isColumn (bool) {
         const prev = this.isColumn;
         this.#isColumn = bool;
+        if (bool !== this.axis.isColumn) this.axis.isColumn = bool;
         if (bool != prev) this.updateLayout();
         return bool;
     }
