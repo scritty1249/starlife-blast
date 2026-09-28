@@ -30,6 +30,7 @@ export class Join extends Phase {
         this.store.LobbyCache = {
             Teams: new Map()
         };
+        this.flags.REQUEST_LOCK = false;
     }
     async #load () {
         await this.#loadLobby();
@@ -98,8 +99,8 @@ export class Join extends Phase {
         button.fillColor.apply(255, 255, 255, 1);
         button.fontColor.apply(0, 0, 0, 1);
         button.text = "Join";
+        button.userData.lock = false;
         button.onclick = () => {
-            this.setJoinButtonVisibility(false);
             this.#onjoin(teamid);
         }
         return button;
@@ -115,7 +116,6 @@ export class Join extends Phase {
         button.fontColor.apply(0, 0, 0, 1);
         button.text = "Start";
         button.onclick = () => {
-            this.setStartButtonVisibility(false);
             this.#onstart();
         }
         button.hide = !this.isClientHost;
@@ -132,7 +132,6 @@ export class Join extends Phase {
         button.fontColor.apply(0, 0, 0, 1);
         button.text = "Leave Lobby";
         button.onclick = () => {
-            this.setLeaveButtonVisibility(false);
             this.#onleave();
         }
         button.hide = this.isClientHost;
@@ -179,6 +178,15 @@ export class Join extends Phase {
         await this.store.lobbyElements.computeBounds(this.Global.Display.cursor);
     }
 
+    // checks and sets
+    setRequestLock () {
+        const prev = this.flags.REQUEST_LOCK;
+        this.flags.REQUEST_LOCK = true;
+        return prev;
+    }
+    releaseRequestLock () {
+        this.flags.REQUEST_LOCK = false;
+    }
     isPlayerInLobby (userid, cache = true) {
         return cache
             ? this.#isPlayerInLobbyCache(userid)
@@ -235,21 +243,21 @@ export class Join extends Phase {
         }
         await this.#computeLayoutBounds();
     }
-    setJoinButtonVisibility (visible) {
+    setJoinButtonVisibility (visible, triggerReflow = true) {
         const hide = !visible;
         for (const [teamid, { avatars, join: button }] of this.store.teamElements)
             if (hide) button.hide = true;
             else button.hide = this.store.LobbyCache.Teams.get(teamid).has(this.ClientPlayerID)
                 || avatars.length >= this.Lobby.teamsize;
-        this.#computeLayoutBounds();
+        if (triggerReflow) this.#computeLayoutBounds();
     }
-    setStartButtonVisibility (visible) {
+    setStartButtonVisibility (visible, triggerReflow = true) {
         this.store.startButton.hide = !visible;
-        this.#computeLayoutBounds();
+        if (triggerReflow) this.#computeLayoutBounds();
     }
-    setLeaveButtonVisibility (visible) {
+    setLeaveButtonVisibility (visible, triggerReflow = true) {
         this.store.leaveButton.hide = !visible;
-        this.#computeLayoutBounds();
+        if (triggerReflow) this.#computeLayoutBounds();
     }
     async addNewPlayer (userid, avatar, team) {
         if (this.store.LobbyCache.Teams.has(team)) {
