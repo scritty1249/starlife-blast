@@ -234,8 +234,11 @@ export class Join extends Phase {
         if (this.Global.flags.DEBUG) this.#drawDebugOverlay();
     }
     onResize () {
+        this.reflowLayout();
+    }
+    async reflowLayout () {
         this.#computeLayoutFlow();
-        this.#computeLayoutBounds();
+        await this.#computeLayoutBounds();
     }
     async computeLayout () {
         for (const [teamid, { avatars: icons, join: joinButton }] of this.store.teamElements) {
@@ -251,7 +254,7 @@ export class Join extends Phase {
                 }
             }
         }
-        this.onResize();
+        this.reflowLayout();
     }
     setJoinButtonVisibility (visible, triggerReflow = true) {
         const hide = !visible;
@@ -259,15 +262,15 @@ export class Join extends Phase {
             if (hide) button.hide = true;
             else button.hide = this.store.LobbyCache.Teams.get(teamid).has(this.ClientPlayerID)
                 || avatars.length >= this.Lobby.teamsize;
-        if (triggerReflow) this.onResize();
+        if (triggerReflow) this.reflowLayout();
     }
     setStartButtonVisibility (visible, triggerReflow = true) {
         this.store.startButton.hide = !visible;
-        if (triggerReflow) this.onResize();
+        if (triggerReflow) this.reflowLayout();
     }
     setLeaveButtonVisibility (visible, triggerReflow = true) {
         this.store.leaveButton.hide = !visible;
-        if (triggerReflow) this.onResize();
+        if (triggerReflow) this.reflowLayout();
     }
     async addNewPlayer (userid, avatar, team) {
         if (this.store.LobbyCache.Teams.has(team)) {
