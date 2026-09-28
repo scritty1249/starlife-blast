@@ -45,6 +45,7 @@ export class Join extends Phase {
         this.store.leaveButton = this.#createLeaveButton();
         const layout = new ItemLayout();
         layout.isColumn = true;
+        layout.ignoreHidden = true;
         this.store.teamLayouts = new ItemLayout();
         this.store.teamLayouts.align = ALIGNMENT.START;
         this.store.teamLayouts.gap = 20;
@@ -52,6 +53,7 @@ export class Join extends Phase {
             const teamPlayers = new Map();
             const teamLayout = new ItemLayout();
             const iconLayout = new ItemLayout();
+            teamLayout.ignoreHidden = true;
             teamLayout.gap = 5;
             iconLayout.gap = 10;
             for (const player of team) {
@@ -173,6 +175,9 @@ export class Join extends Phase {
     #isPlayerInLobbyCache (userid) {
         return this.store.LobbyCache.Teams.values().some((t) => t.has(userid));
     }
+    async #computeLayoutBounds () {
+        await this.store.lobbyElements.computeBounds(this.Global.Display.cursor);
+    }
 
     isPlayerInLobby (userid, cache = true) {
         return cache
@@ -228,7 +233,7 @@ export class Join extends Phase {
                 }
             }
         }
-        await this.store.lobbyElements.computeBounds(this.Global.Display.cursor);
+        await this.#computeLayoutBounds();
     }
     setJoinButtonVisibility (visible) {
         const hide = !visible;
@@ -236,12 +241,15 @@ export class Join extends Phase {
             if (hide) button.hide = true;
             else button.hide = this.store.LobbyCache.Teams.get(teamid).has(this.ClientPlayerID)
                 || avatars.length >= this.Lobby.teamsize;
+        this.#computeLayoutBounds();
     }
     setStartButtonVisibility (visible) {
         this.store.startButton.hide = !visible;
+        this.#computeLayoutBounds();
     }
     setLeaveButtonVisibility (visible) {
         this.store.leaveButton.hide = !visible;
+        this.#computeLayoutBounds();
     }
     async addNewPlayer (userid, avatar, team) {
         if (this.store.LobbyCache.Teams.has(team)) {

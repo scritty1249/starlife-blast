@@ -13,6 +13,7 @@ export class ItemLayout extends MenuItem {
     #size = new Vector(); // [!] do not return as reference
     #gap = 0;
     #isColumn = false;
+    #ignoreHidden = false; // make space for hidden items
     constructor () {
         super();
         this.padding.onupdate = () => this.updateLayout();
@@ -24,13 +25,14 @@ export class ItemLayout extends MenuItem {
         if (this.#items.length) {
             let itemCount = 0;
             const collectX = this.isColumn
-                ? (item) => { const { width } = item; if (width > x) x = width; if (width) itemCount++; }
+                ? (item) => { const { width } = item; if (width > x) x = width; if (width > 0) itemCount++; }
                 : (item) => { x += item.width }
             const collectY = this.isColumn
                 ? (item) => { y += item.height }
-                : (item) => { const { height } = item; if (height > y) y = height; if (height) itemCount++; }
+                : (item) => { const { height } = item; if (height > y) y = height; if (height > 0) itemCount++; }
             for (let i = 0; i < this.#items.length; i++) {
                 const item = this.#items[i];
+                if (this.ignoreHidden && item?.hide) continue;
                 collectX(item);
                 collectY(item);
             }
@@ -90,8 +92,10 @@ export class ItemLayout extends MenuItem {
                 item.setPosition(mainAxis, getAlignment(item));
                 mainAxis += item.width + gap;
             };
-        for (let i = 0; i < this.#items.length; i++)
+        for (let i = 0; i < this.#items.length; i++) {
+            if (this.ignoreHidden && this.#items[i]?.hide) continue;
             applyPosition(this.#items[i]);
+        }
     }
     #updateBoundingBox () {
         const { min, max } = this.#bbox;
@@ -198,8 +202,16 @@ export class ItemLayout extends MenuItem {
     }
     get gap () { return this.#gap }
     set gap (num) {
-        const result = (this.#gap = num);
-        this.updateLayout();
-        return result;
+        const prev = this.#gap;
+        this.#gap = num;
+        if (prev !== num) this.updateLayout();
+        return num;
+    }
+    get ignoreHidden () { return this.#ignoreHidden }
+    set ignoreHidden (bool) {
+        const prev = this.#ignoreHidden;
+        this.#ignoreHidden = !!bool;
+        if (prev !== this.#ignoreHidden) this.updateLayout();
+        return this.#ignoreHidden;
     }
 }
