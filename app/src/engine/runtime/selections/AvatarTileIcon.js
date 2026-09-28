@@ -51,6 +51,7 @@ export class AvatarTileIcon extends Icon {
     getPosition () { return super.getPosition().sub(this.#positionOffset, true) }
     setPosition (x, y = null) {
         super.setPosition(x, y);
+        this.position.add(this.#positionOffset, true);
         this.#updateShape();
     }
 
