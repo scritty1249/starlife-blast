@@ -177,6 +177,13 @@ export class ItemLayout extends MenuItem {
         min.apply(this.#position.x, this.#position.y - this.#size.box.y);
         max.apply(this.#position.x + this.#size.box.x, this.#position.y);
     }
+    #reflowLayout () {
+        this.#updateSize();
+        this.#updateBoundingBox();
+        this.#updateMainAlignment();
+        this.#updateCrossAlignment();
+        this.#updateItemPositions();
+    }
 
     // menuitem methods
     async computeBounds (cursor) {
@@ -197,11 +204,7 @@ export class ItemLayout extends MenuItem {
             const item = this.#items[i];
             if (item?.isItemLayout) item.updateLayout();
         }
-        this.#updateSize();
-        this.#updateBoundingBox();
-        this.#updateMainAlignment();
-        this.#updateCrossAlignment();
-        this.#updateItemPositions();
+        this.#reflowLayout();
     }
     setPosition (x, y = null) {
         this.#position.apply(x, y).sub(this.originOffset, true);
@@ -287,5 +290,15 @@ export class ItemLayout extends MenuItem {
         this.#ignoreHidden = !!bool;
         if (prev !== this.#ignoreHidden) this.updateLayout();
         return this.#ignoreHidden;
+    }
+    set minWidth (num) {
+        super.minWidth = num;
+        if (this.minWidth > this.width) this.#reflowLayout();
+        return num;
+    }
+    set minHeight (num) {
+        super.minWidth = num;
+        if (this.minHeight > this.height) this.#reflowLayout();
+        return num;
     }
 }
