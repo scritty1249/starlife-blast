@@ -22,19 +22,20 @@ export class ItemLayout extends MenuItem {
         let x = 0;
         let y = 0;
         if (this.#items.length) {
+            let itemCount = 0;
             const collectX = this.isColumn
-                ? (item) => { const { width } = item; if (width > x) x = width; }
+                ? (item) => { const { width } = item; if (width > x) x = width; if (width) itemCount++; }
                 : (item) => { x += item.width }
             const collectY = this.isColumn
                 ? (item) => { y += item.height }
-                : (item) => { const { height } = item; if (height > y) y = height; }
+                : (item) => { const { height } = item; if (height > y) y = height; if (height) itemCount++; }
             for (let i = 0; i < this.#items.length; i++) {
                 const item = this.#items[i];
                 collectX(item);
                 collectY(item);
             }
             const { horizontal, vertical } = this.padding;
-            const gaps = (this.#items.length - 1) * this.gap;
+            const gaps = Math.max(0, itemCount - 1) * this.gap;
             x += horizontal;
             y += vertical;
             if (this.isColumn) y += gaps;
