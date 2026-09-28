@@ -23,7 +23,7 @@ export class Label extends MenuItem {
         if (Number.isFinite(fontSize)) this.fontSize = fontSize;
         if (fontColor) this.fontColor.apply(fontColor);
         if (fontFamily) this.fontFamily = fontFamily;
-        if (cursor) this.computeSizing(cursor);
+        if (cursor) this.#computeTextSizing(cursor);
     }
 
     #updateBoundingBox () {
@@ -36,12 +36,7 @@ export class Label extends MenuItem {
         cursor.textBaseline = "top";
         cursor.font = this.fontStyle;
     }
-
-    async computeBounds (cursor) {
-        await super.computeBounds(cursor);
-        this.computeSizing(cursor);
-    }
-    computeSizing (cursor) {
+    #computeTextSizing (cursor) {
         if (this.text) {
             cursor.save();
             this.#applyFont(cursor);
@@ -49,7 +44,6 @@ export class Label extends MenuItem {
                 width: wdh,
                 actualBoundingBoxAscent,
                 actualBoundingBoxDescent,
-                actualBoundingBox,
                 actualBoundingBoxLeft,
                 actualBoundingBoxRight
             } = cursor.measureText(this.text);
@@ -69,8 +63,13 @@ export class Label extends MenuItem {
         this.#updateBoundingBox();
         this.#properties.hasUpdate = false;
     }
+
+    async computeBounds (cursor) {
+        await super.computeBounds(cursor);
+        this.#computeTextSizing(cursor);
+    }
     draw (cursor, fixed = false) {
-        if (this.hasUpdate) this.computeSizing(cursor);
+        if (this.hasUpdate) this.#computeTextSizing(cursor);
         cursor.save();
         cursor.fixed = fixed;
         this.#applyFont(cursor);
