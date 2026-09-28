@@ -176,6 +176,7 @@ export class Join extends Phase {
     }
     async #computeLayoutBounds () {
         await this.store.lobbyElements.computeBounds(this.Global.Display.cursor);
+        this.onResize();
     }
 
     // checks and sets
