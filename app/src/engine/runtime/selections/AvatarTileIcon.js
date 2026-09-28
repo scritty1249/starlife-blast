@@ -7,10 +7,14 @@ export class AvatarTileIcon extends Icon {
     constructor (image, shape) {
         super(image);
         this.#shape = shape;
-        this.#updateShapePosition();
+        this.#updateShape();
     }
 
-    #updateShapePosition () {
+    #updatePositionOffset () {
+        const { min, height } = this.shape.getBoundingBox();
+        this.position.apply(min.x, min.y + height);
+    }
+    #updateShape () {
         const { shape } = this;
         const { transform } = shape;
         const { hash: shapeHash, center: shapeCenter } = shape;
@@ -25,14 +29,15 @@ export class AvatarTileIcon extends Icon {
             shape.applyTransform();
             transform.restore();
         }
+        this.#updatePositionOffset();
     }
 
     async computeBounds (cursor) {
         await super.computeBounds(cursor);
-        this.#updateShapePosition();
+        this.#updateShape();
     }
     draw (cursor, fixed = false) {
-        this.#updateShapePosition();
+        this.#updateShape();
         cursor.save();
         cursor.fixed = fixed;
         this.shape.draw(cursor, true);
@@ -43,7 +48,7 @@ export class AvatarTileIcon extends Icon {
     getBoundingBox () { return this.shape.getBoundingBox() }
     setPosition (x, y = null) {
         super.setPosition(x, y);
-        this.#updateShapePosition();
+        this.#updateShape();
     }
 
     get isAvatarTileIcon () { return true }
