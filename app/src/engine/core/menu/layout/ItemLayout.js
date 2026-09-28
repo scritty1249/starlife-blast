@@ -34,7 +34,7 @@ export class ItemLayout extends MenuItem {
                 collectY(item);
             }
             const { horizontal, vertical } = this.padding;
-            const gaps = this.#items.length - 1 * this.gap;
+            const gaps = (this.#items.length - 1) * this.gap;
             x += horizontal;
             y += vertical;
             if (this.isColumn) y += gaps;
